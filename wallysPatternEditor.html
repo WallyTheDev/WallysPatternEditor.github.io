@@ -1,0 +1,1717 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wally's Pattern Editor</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
+<style>
+  :root{
+    --bg:#0a0c11; --panel:#12151e; --panel2:#171c28; --border:#252b3b;
+    --text:#e7eaf2; --muted:#828aa0; --accent:#38d6ff;
+    --danger:#ff5470; --cell-off:#1b1f2a;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    padding:22px; min-height:100vh; font-size:14px;
+  }
+  h1{font-size:1.3rem; margin:0 0 2px;}
+  .sub{color:var(--muted); font-size:.82rem; margin:0 0 16px;}
+  .panel{background:var(--panel); border:1px solid var(--border); border-radius:9px; padding:12px 14px; margin-bottom:14px;}
+  .toolbar{display:flex; flex-wrap:wrap; gap:8px; align-items:center;}
+  button{
+    background:var(--panel2); color:var(--text); border:1px solid var(--border);
+    border-radius:6px; padding:7px 11px; font-size:.82rem; cursor:pointer;
+  }
+  button:hover{border-color:var(--accent);}
+  button:focus-visible{outline:2px solid var(--accent); outline-offset:1px;}
+  button.primary{background:var(--accent); color:#04202a; border-color:var(--accent); font-weight:600;}
+  button.danger:hover{border-color:var(--danger); color:var(--danger);}
+  button.icon{padding:2px 6px; font-size:.72rem; line-height:1.4;}
+  input[type=number]{width:64px;}
+  input[type=text], input[type=number], select{
+    background:var(--panel2); color:var(--text); border:1px solid var(--border);
+    border-radius:5px; padding:5px 7px; font-size:.82rem;
+  }
+  input[type=range]{accent-color:var(--accent); width:150px;}
+  .divider{width:1px; height:22px; background:var(--border); margin:0 2px;}
+  label.bpm{display:flex; align-items:center; gap:6px; color:var(--muted); font-size:.78rem;}
+
+  .palettelabel{color:var(--muted); font-size:.75rem; margin-bottom:8px;}
+  .palette{display:flex; flex-wrap:wrap; gap:8px; align-items:center;}
+  .swatchbtn{width:28px; height:28px; padding:0; border-radius:6px; border:2px solid transparent; cursor:pointer;}
+  .swatchbtn.sel{border-color:var(--accent); box-shadow:0 0 0 2px rgba(56,214,255,.25);}
+  .swatchbtn.off{background:var(--cell-off); position:relative;}
+  .swatchbtn.off::after{content:'';position:absolute; left:3px; right:3px; top:50%; height:2px; background:var(--danger); transform:rotate(45deg);}
+  .customwrap{display:flex; align-items:center; gap:6px; color:var(--muted); font-size:.75rem;}
+  input[type=color]{width:28px; height:28px; border:none; background:none; padding:0; cursor:pointer; border-radius:6px;}
+
+  label.randlabel{display:flex; align-items:center; gap:6px; color:var(--muted); font-size:.78rem;}
+
+  .viewer-wrap{position:relative;}
+  #viewer3d{width:100%; height:340px; display:block; border-radius:8px; background:#05060a;}
+  #viewer3d-status{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:var(--muted); font-size:.8rem; text-align:center; padding:0 20px;}
+
+  .gridwrap{overflow:auto; border:1px solid var(--border); border-radius:9px; max-height:60vh;}
+  table{border-collapse:collapse;}
+  th,td{border:1px solid var(--border); padding:0; text-align:center;}
+  thead th{background:var(--panel2); position:sticky; top:0; z-index:2; padding:5px 3px; width:100px;}
+  thead th.corner{position:sticky; left:0; top:0; z-index:3; background:var(--panel2); width:70px;}
+  tbody th{position:sticky; left:0; background:var(--panel); z-index:1; padding:2px 4px; width:70px;}
+  tr.playing td, tr.playing th{background:rgba(56,214,255,.08);}
+  .lh{display:flex; flex-direction:column; align-items:center; gap:4px;}
+  .lh .ind{width:14px; height:14px; border-radius:50%; background:var(--cell-off); border:1px solid var(--border);}
+  .lh .ind.on{box-shadow:0 0 8px 2px var(--glow,#fff);}
+  .lh .lnum{color:var(--muted); font-size:.66rem;}
+  .lh select{width:90px; padding:3px 2px; font-size:.68rem;}
+  .lh input[type=text]{width:90px; text-align:center; padding:3px 2px; font-size:.7rem;}
+  .lh .rm{background:none; border:none; color:var(--muted); font-size:.68rem; padding:0; cursor:pointer;}
+  .lh .rm:hover{color:var(--danger);}
+  .lh .rowbtns{display:flex; flex-wrap:wrap; justify-content:center; gap:2px 9px; align-items:center; width:96px;}
+  .lh .dup{background:none; border:none; color:var(--muted); font-size:.68rem; padding:0; cursor:pointer;}
+  .lh .dup:hover:not(:disabled){color:var(--accent);}
+  .lh .dup:disabled{opacity:.35; cursor:default;}
+  .lh .dup.src{color:var(--accent); font-weight:600;}
+  .rh{display:flex; align-items:center; gap:3px; flex-wrap:nowrap; justify-content:flex-start;}
+  .rh .snum{color:var(--muted); font-size:.7rem; width:16px; flex-shrink:0;}
+  .cellbtn{width:100%; height:24px; background:var(--cell-off); border:none; cursor:pointer; display:block;}
+  .cellbtn{font:600 .62rem/24px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; padding:0; letter-spacing:.02em; overflow:hidden; white-space:nowrap;}
+  .cellbtn:hover{filter:brightness(1.35);}
+  .codeopts{display:flex; flex-wrap:wrap; align-items:center; gap:12px; margin-top:10px; color:var(--muted); font-size:.78rem;}
+  .codeopts label{display:flex; align-items:center; gap:6px;}
+  .codeopts input[type=checkbox]{accent-color:var(--accent);}
+  .codelabel{color:var(--text); font:.75rem ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; background:var(--panel2); border:1px solid var(--border); border-radius:5px; padding:3px 7px;}
+  .cellbtn:focus-visible{outline:2px solid var(--accent); outline-offset:-2px;}
+  .empty-state{color:var(--muted); padding:26px; text-align:center; font-size:.85rem;}
+  .footer-note{color:var(--muted); font-size:.72rem; margin-top:12px;}
+  .matchip{display:inline-flex; align-items:center; gap:5px; margin:2px 8px 2px 0; font-size:.75rem; color:var(--muted);}
+  .matchip .sw{width:12px; height:12px; border-radius:3px; display:inline-block; border:1px solid var(--border);}
+  .viewctl{display:flex; flex-wrap:wrap; gap:16px; align-items:center; margin-top:10px;}
+  .viewctl label{display:flex; align-items:center; gap:8px; color:var(--muted); font-size:.78rem;}
+  .viewctl input[type=range]{width:130px;}
+  .viewctl .val{min-width:30px; color:var(--text); font-variant-numeric:tabular-nums;}
+  .detectrow{display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-top:10px; color:var(--muted); font-size:.78rem;}
+  .detectrow label{display:flex; align-items:center; gap:6px;}
+  .detectrow input[type=text]{width:120px;}
+  .subhead{color:var(--muted); font-size:.75rem; margin:14px 0 6px;}
+  .paintgrid{display:flex; flex-wrap:wrap; gap:6px 10px;}
+  .paintrow{display:flex; align-items:center; gap:7px; background:var(--panel2); border:1px solid var(--border); border-radius:6px; padding:4px 8px 4px 5px; font-size:.75rem; color:var(--text);}
+  .paintrow input[type=color]{width:24px; height:24px; border-radius:5px;}
+  .paintrow .pname{max-width:170px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .paintrow .rst{background:none; border:none; color:var(--muted); padding:0 2px; font-size:.7rem;}
+  .paintrow .rst:hover{color:var(--accent);}
+  .paintrow.changed{border-color:var(--accent);}
+  .lh .movrow{display:flex; align-items:center; justify-content:center; gap:3px; width:96px;}
+  .lh .movrow .lnum{flex:1 1 auto;}
+  .lh .mv{background:none; border:1px solid var(--border); color:var(--muted); font-size:.6rem; line-height:1; padding:2px 4px; border-radius:4px;}
+  .lh .mv:hover:not(:disabled){color:var(--accent); border-color:var(--accent);}
+  .lh .selbox{display:flex; align-items:center; gap:4px; color:var(--muted); font-size:.66rem; cursor:pointer;}  .lh .selbox input{accent-color:var(--accent); margin:0;}
+  thead th.selcol{background:rgba(56,214,255,.14); box-shadow:inset 0 -2px 0 var(--accent);}
+  thead th.selcol .selbox{color:var(--accent);}
+
+  .presetbar{display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:10px;}
+  .presetbar .selcount{color:var(--muted); font-size:.78rem;}
+  .presetbar .selcount b{color:var(--accent); font-variant-numeric:tabular-nums;}
+  #presetName{width:190px;}
+  .presetlist{display:flex; flex-direction:column; gap:6px;}
+  .presetitem{display:flex; flex-wrap:wrap; align-items:center; gap:8px; background:var(--panel2); border:1px solid var(--border); border-radius:6px; padding:6px 9px;}
+  .presetitem .pn{font-weight:600; font-size:.82rem;}
+  .presetitem .meta{color:var(--muted); font-size:.72rem; font-variant-numeric:tabular-nums;}
+  .presetitem .spacer{flex:1 1 auto;}
+  .presetitem .mini{display:flex; gap:2px; align-items:flex-start;}
+  .presetitem .minicol{display:flex; flex-direction:column; gap:1px;}
+  .presetitem .minicol i{width:7px; height:3px; border-radius:1px; background:var(--cell-off); display:block;}
+  ::-webkit-scrollbar{height:9px; width:9px;}
+  ::-webkit-scrollbar-thumb{background:var(--border); border-radius:6px;}
+
+  /* ====== app shell layout ====== */
+  body{padding:0; height:100vh; overflow:hidden; display:flex; flex-direction:column;}
+  .appbar{
+    display:flex; flex-wrap:wrap; gap:8px; align-items:center;
+    padding:8px 14px; background:var(--panel); border-bottom:1px solid var(--border); flex:0 0 auto;
+  }
+  .appbar h1{font-size:.95rem; margin:0 6px 0 0; white-space:nowrap;}
+  .appbar .grow{flex:1 1 auto;}
+  .workspace{flex:1 1 auto; display:flex; min-height:0;}
+  .gridpane{flex:1 1 auto; display:flex; flex-direction:column; min-width:0; min-height:0; padding:10px 12px 0; gap:9px;}
+  .paintbar{background:var(--panel); border:1px solid var(--border); border-radius:9px; padding:9px 12px; flex:0 0 auto;}
+  .paintbar .palette{gap:7px;}
+  .paintbar .row2{display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-top:9px; padding-top:9px; border-top:1px solid var(--border);}
+  .gridpane .gridwrap{flex:1 1 auto; min-height:0; max-height:none; margin:0;}
+  .statusbar{
+    flex:0 0 auto; color:var(--muted); font-size:.74rem; padding:7px 2px 8px;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+
+  .sidepane{
+    flex:0 0 400px; width:400px; display:flex; flex-direction:column; min-height:0;
+    border-left:1px solid var(--border); background:var(--panel);
+  }
+  body.side-collapsed .sidepane{display:none;}
+  .tabs{display:flex; gap:2px; padding:7px 8px 0; border-bottom:1px solid var(--border); flex:0 0 auto;}
+  .tabs button{
+    background:none; border:none; border-bottom:2px solid transparent; border-radius:6px 6px 0 0;
+    color:var(--muted); padding:7px 10px; font-size:.78rem;
+  }
+  .tabs button:hover{color:var(--text);}
+  .tabs button.active{color:var(--accent); border-bottom-color:var(--accent); background:var(--panel2);}
+  .tabbody{flex:1 1 auto; min-height:0; overflow:auto; padding:12px;}
+  .tabpanel{display:none;}
+  .tabpanel.active{display:block;}
+  .tabpanel.active#tab-preview{display:flex; flex-direction:column; height:100%;}
+  #tab-preview .viewer-wrap{flex:1 1 auto; min-height:220px;}
+  #tab-preview #viewer3d{height:100%;}
+  .tabpanel .panel{background:none; border:none; border-radius:0; padding:0; margin:0 0 14px;}
+  .tabpanel .panel + .panel{border-top:1px solid var(--border); padding-top:12px;}
+  .sectlabel{color:var(--text); font-size:.82rem; font-weight:600; margin:0 0 8px;}
+  .viewctl{gap:10px 16px;}
+  button:disabled{opacity:.4; cursor:default;}
+  button:disabled:hover{border-color:var(--border); color:var(--text);}
+  .presetitem{padding:6px 8px; gap:6px 8px;}
+  .presetitem .pn{flex:1 1 auto;}
+  .presetitem .spacer{flex-basis:100%; height:0;}   /* pushes the action buttons onto their own line */
+
+  @media (max-width:1080px){
+    body{height:auto; overflow:auto; display:block;}
+    .workspace{display:block;}
+    .gridpane{padding:10px 12px;}
+    .gridpane .gridwrap{max-height:60vh;}
+    .sidepane{width:auto; border-left:none; border-top:1px solid var(--border);}
+    .tabbody{overflow:visible;}
+    .tabpanel.active#tab-preview{height:auto;}
+    #tab-preview #viewer3d{height:320px;}
+  }
+</style>
+</head>
+<body>
+
+<header class="appbar">
+  <h1>Light Pattern Editor</h1>
+  <button class="primary" id="playBtn">▶ Play</button>
+  <label class="bpm">BPM
+    <input type="range" id="bpmRange" min="30" max="1000" step="1" value="300">
+    <input type="number" id="bpmNum" min="30" max="1000" value="300">
+  </label>
+  <div class="divider"></div>
+  <button id="addLight">+ Add Light</button>
+  <button id="addStep">+ Add Step</button>
+  <div class="divider"></div>
+  <button id="saveLocal">Save</button>
+  <button id="loadLocal">Load</button>
+  <button id="exportJson">Export JSON</button>
+  <button id="importJsonBtn">Import JSON</button>
+  <input type="file" id="importJson" accept="application/json" style="display:none">
+  <div class="grow"></div>
+  <button id="toggleSide" title="Show or hide the side panel">Hide panel ⟩</button>
+</header>
+
+<div class="workspace">
+
+  <main class="gridpane">
+    <div class="paintbar">
+      <div class="palettelabel">Paint color — click a swatch, then click cells to apply it</div>
+      <div class="palette" id="palette"></div>
+      <div class="row2">
+        <span class="selcount" id="groupCount"><b>0</b> columns grouped</span>
+        <button id="selAll">Select all</button>
+        <button id="selNone">Clear selection</button>
+        <button class="danger" id="clearGroupSteps">Clear steps in group</button>
+        <div class="divider"></div>
+        <label class="randlabel"><input type="checkbox" id="showCodes"> Color codes in cells</label>
+        <select id="codeFormat"><option value="hex">Hex</option><option value="rgb">RGB</option></select>
+      </div>
+    </div>
+
+    <div class="gridwrap">
+      <table id="grid"></table>
+    </div>
+
+    <p class="statusbar" id="status">Ready. This file runs mostly offline — the 3D preview and model import need internet access to load once.</p>
+  </main>
+
+  <aside class="sidepane">
+    <nav class="tabs" id="tabs">
+      <button class="active" data-tab="preview">Preview</button>
+      <button data-tab="patterns">Patterns</button>
+      <button data-tab="tools">Tools</button>
+      <button data-tab="model">Model</button>
+    </nav>
+    <div class="tabbody">
+
+      <section class="tabpanel active" id="tab-preview">
+        <div class="palettelabel">3D vehicle preview — drag to rotate, scroll to zoom</div>
+        <div class="viewer-wrap">
+          <canvas id="viewer3d"></canvas>
+          <div id="viewer3d-status">Loading 3D preview…</div>
+        </div>
+        <div class="viewctl">
+          <label>Bloom <input type="range" id="bloomRange" min="0" max="4" step="0.05" value="1.2"><span class="val" id="bloomVal"></span></label>
+          <label>Light glow <input type="range" id="glowRange" min="0.5" max="6" step="0.1" value="1.8"><span class="val" id="glowVal"></span></label>
+          <label>Halo / flare <input type="range" id="haloRange" min="0" max="3" step="0.05" value="1"><span class="val" id="haloVal"></span></label>
+          <label>Scene brightness <input type="range" id="brightRange" min="0.3" max="2.5" step="0.05" value="1"><span class="val" id="brightVal"></span></label>
+          <button id="viewReset" class="icon">Reset view settings</button>
+        </div>
+      </section>
+
+      <section class="tabpanel" id="tab-patterns">
+        <div class="sectlabel">Preset patterns</div>
+        <div class="palettelabel">Tick "Group" on any light columns, then save them as a reusable pattern.</div>
+        <div class="presetbar">
+          <span class="selcount" id="selCount"><b>0</b> columns grouped</span>
+          <input type="text" id="presetName" placeholder="Pattern name" spellcheck="false">
+          <button class="primary" id="savePreset">Save grouped columns</button>
+        </div>
+        <div class="presetbar">
+          <label class="randlabel">Apply to
+            <select id="applyMode">
+              <option value="selected">Grouped columns</option>
+              <option value="new">New columns added at the end</option>
+            </select>
+          </label>
+          <div class="divider"></div>
+          <button id="importPresetBtn">Import</button>
+          <input type="file" id="importPreset" accept="application/json" multiple style="display:none">
+          <button id="exportAllPresets">Export all</button>
+        </div>
+        <div class="presetlist" id="presetList"></div>
+        <p class="footer-note">Saved patterns hold nothing but the step colors, column by column. No light names, mount points, or IDs travel with them, so a pattern can be applied to any set of columns in any file.</p>
+      </section>
+
+      <section class="tabpanel" id="tab-tools">
+        <div class="panel">
+          <div class="sectlabel">Randomize</div>
+          <div class="palette">
+            <label class="randlabel">Color A
+              <select id="randColorA"></select>
+            </label>
+            <input type="color" id="randColorACustom" value="#ff0000" style="display:none;">
+            <label class="randlabel">Color B
+              <select id="randColorB"></select>
+            </label>
+            <input type="color" id="randColorBCustom" value="#0000ff" style="display:none;">
+            <button class="primary" id="randGenerate">Generate</button>
+          </div>
+          <p class="footer-note">Fills every cell of every column with a random mix of the chosen colors and "off".</p>
+        </div>
+        <div class="panel">
+          <div class="sectlabel">Color cleanup</div>
+          <button id="snapColors">Snap all colors to the palette</button>
+          <p class="footer-note">Rounds every cell in the grid to the nearest palette color, so patterns built with the older muted swatches come up to full intensity. Custom colors you picked deliberately get rounded too, so use it before hand-tuning.</p>
+        </div>
+        <div class="panel">
+          <div class="sectlabel">Danger zone</div>
+          <button class="danger" id="clearAll">Clear all lights and steps</button>
+        </div>
+      </section>
+
+      <section class="tabpanel" id="tab-model">
+        <div class="sectlabel">3D model materials</div>
+        <div class="toolbar">
+          <button id="modelImportBtn">Import 3D Model (.glb)</button>
+          <input type="file" id="modelImport" accept=".glb,.gltf" style="display:none">
+          <button id="resetModelBtn">Reset to Generic Vehicle</button>
+        </div>
+        <div class="detectrow">
+          <span>Auto-add lights from materials whose name</span>
+          <label>starts with <input type="text" id="detectPrefix" placeholder="e.g. LIGHT_" spellcheck="false"></label>
+          <label>or ends with <input type="text" id="detectSuffix" placeholder="e.g. _light" spellcheck="false"></label>
+          <button id="rescanBtn">Re-scan loaded model</button>
+        </div>
+        <div class="subhead">Light materials (driven by the pattern)</div>
+        <div id="lightMatList"></div>
+        <div class="subhead">Other materials — body, glass, trim, etc. <button class="icon" id="resetPaintBtn" style="margin-left:6px;">Reset all colors</button></div>
+        <div id="materialList" class="paintgrid"></div>
+        <p class="footer-note" style="margin-top:10px;">Import a single self-contained .glb file of your vehicle for best results. Any material whose name matches the prefix/suffix above is added as a light column automatically (matching is not case-sensitive); you can still change any column's material from its dropdown. Any material not assigned to a light shows up under "Other materials" so you can recolor it. Material assignments aren't saved in exported JSON, but the prefix/suffix and your color choices are, so just re-import the model when you reopen this file.</p>
+      </section>
+
+    </div>
+  </aside>
+</div>
+
+<script>
+// Pure, fully-saturated colors — every channel pushed to its limit for the hue,
+// which is what an actual RGB fixture outputs at full drive.
+const PRESETS = [
+  {name:"Red", hex:"#ff0000"},        // 255, 0, 0
+  {name:"Blue", hex:"#0000ff"},       // 0, 0, 255
+  {name:"White", hex:"#ffffff"},      // 255, 255, 255
+  {name:"Amber", hex:"#ffbf00"},      // 255, 191, 0
+  {name:"Purple", hex:"#8000ff"},     // 128, 0, 255
+  {name:"Green", hex:"#00ff00"},      // 0, 255, 0
+  {name:"Cyan", hex:"#00ffff"},       // 0, 255, 255
+  {name:"Magenta", hex:"#ff00ff"}     // 255, 0, 255
+];
+const POSITION_NAMES = ["Front Left","Front Right","Rear Left","Rear Right","Roof Left","Roof Right","Mirror Left","Mirror Right","Grille Left","Grille Right"];
+
+const VIEW_DEFAULTS = { v: 2, bloom: 1.2, glow: 1.8, halo: 1.0, brightness: 1.0 };
+let state = { bpm: 300, lights: [], steps: [], autoDetect: { prefix: "", suffix: "" }, materialColors: {}, view: { ...VIEW_DEFAULTS }, showCodes: false, codeFormat: "hex" };
+let playing = false, playTimer = null, playIndex = 0;
+let selectedColor = PRESETS[0].hex; // current paint color; null = eraser/off
+let selectedLights = new Set();     // ids of columns ticked as a group
+let presets = [];                   // saved pattern presets: { id, name, columns: [[hex|null, ...], ...] }
+const PRESET_KEY = 'lightPatternEditor.presets';
+const PRESET_FILE_TYPE = 'light-pattern-preset';
+
+function normHex(c){
+  c = String(c || '').trim().toLowerCase();
+  if(/^#[0-9a-f]{3}$/.test(c)) c = '#' + c[1]+c[1] + c[2]+c[2] + c[3]+c[3];
+  return /^#[0-9a-f]{6}$/.test(c) ? c : null;
+}
+function hexToRgb(c){
+  const h = normHex(c); if(!h) return null;
+  return [parseInt(h.slice(1,3),16), parseInt(h.slice(3,5),16), parseInt(h.slice(5,7),16)];
+}
+function colorCode(c, fmt){
+  const rgb = hexToRgb(c); if(!rgb) return String(c);
+  return (fmt || state.codeFormat) === 'rgb' ? rgb.join(', ') : normHex(c).toUpperCase();
+}
+function colorTitle(c){
+  const rgb = hexToRgb(c); if(!rgb) return String(c);
+  return normHex(c).toUpperCase() + '  ·  rgb(' + rgb.join(', ') + ')';
+}
+function readableOn(c){
+  const rgb = hexToRgb(c); if(!rgb) return '#fff';
+  return (0.2126*rgb[0] + 0.7152*rgb[1] + 0.0722*rgb[2]) / 255 > 0.55 ? '#000' : '#fff';
+}
+function uid(){ return Math.random().toString(36).slice(2,9); }
+function newLight(){
+  const n = state.lights.length;
+  return { id: uid(), name: "Light " + (n+1), position: "" };
+}
+function newStep(){
+  const cells = {};
+  state.lights.forEach(l => cells[l.id] = null);
+  return { id: uid(), cells };
+}
+
+function sanitize(){
+  if(!Array.isArray(state.lights)) state.lights = [];
+  state.lights.forEach(l => { if(typeof l.position !== 'string') l.position = ''; });
+  if(!Array.isArray(state.steps)) state.steps = [];
+  state.steps.forEach(s => {
+    if(!s.cells) s.cells = {};
+    Object.keys(s.cells).forEach(k => { if(typeof s.cells[k] !== 'string') s.cells[k] = null; });
+  });
+  if(typeof state.bpm !== 'number') state.bpm = 300;
+  if(!state.autoDetect || typeof state.autoDetect !== 'object') state.autoDetect = { prefix: "", suffix: "" };
+  if(typeof state.autoDetect.prefix !== 'string') state.autoDetect.prefix = "";
+  if(typeof state.autoDetect.suffix !== 'string') state.autoDetect.suffix = "";
+  if(!state.materialColors || typeof state.materialColors !== 'object') state.materialColors = {};
+  state.showCodes = state.showCodes === true;
+  if(state.codeFormat !== 'rgb') state.codeFormat = 'hex';
+  if(!state.view || typeof state.view !== 'object') state.view = {};
+  if(state.view.v !== VIEW_DEFAULTS.v) state.view = { ...VIEW_DEFAULTS };   // older saved view settings used a different glow model
+  Object.keys(VIEW_DEFAULTS).forEach(k => { if(typeof state.view[k] !== 'number') state.view[k] = VIEW_DEFAULTS[k]; });
+}
+
+function addLight(){
+  const l = newLight();
+  state.lights.push(l);
+  state.steps.forEach(s => s.cells[l.id] = null);
+  render(); persist();
+}
+function removeLight(id){
+  state.lights = state.lights.filter(l => l.id !== id);
+  state.steps.forEach(s => delete s.cells[id]);
+  render(); persist();
+}
+function moveLight(id, dir){
+  const i = state.lights.findIndex(l => l.id === id);
+  const j = i + dir;
+  if(i < 0 || j < 0 || j >= state.lights.length) return;
+  [state.lights[i], state.lights[j]] = [state.lights[j], state.lights[i]];
+  render(); persist();
+  setStatus('Moved "' + state.lights[j].name + '" ' + (dir < 0 ? 'left' : 'right') + ' — its colors, name and mount point moved with it.');
+}
+// Copy / paste only the step colors of a column. Names and material assignments are never touched.
+let stepClipboard = null;   // { fromId, fromName, colors: [color|null per step] }
+function copySteps(id){
+  const l = state.lights.find(x => x.id === id);
+  if(!l) return;
+  stepClipboard = { fromId: id, fromName: l.name, colors: state.steps.map(st => typeof st.cells[id] === 'string' ? st.cells[id] : null) };
+  renderGrid();
+  setStatus('Copied ' + stepClipboard.colors.length + ' step' + (stepClipboard.colors.length === 1 ? '' : 's') + ' from "' + l.name + '" — click Paste on another column.');
+}
+function pasteSteps(id){
+  const l = state.lights.find(x => x.id === id);
+  if(!l || !stepClipboard) return;
+  state.steps.forEach((st, i) => { st.cells[id] = i < stepClipboard.colors.length ? stepClipboard.colors[i] : null; });
+  applyActiveStep(playing ? playIndex : -1);
+  renderGrid(); persist();
+  const extra = state.steps.length - stepClipboard.colors.length;
+  setStatus('Pasted steps from "' + stepClipboard.fromName + '" onto "' + l.name + '"' + (extra > 0 ? ' (' + extra + ' step' + (extra === 1 ? '' : 's') + ' added since copying ' + (extra === 1 ? 'was' : 'were') + ' set to off).' : '.'));
+}
+function addStep(){ state.steps.push(newStep()); render(); persist(); }
+function duplicateStep(idx){
+  const copy = JSON.parse(JSON.stringify(state.steps[idx]));
+  copy.id = uid();
+  state.steps.splice(idx+1, 0, copy);
+  render(); persist();
+}
+function removeStep(idx){ state.steps.splice(idx,1); render(); persist(); }
+function moveStep(idx, dir){
+  const j = idx+dir;
+  if(j<0 || j>=state.steps.length) return;
+  [state.steps[idx], state.steps[j]] = [state.steps[j], state.steps[idx]];
+  render(); persist();
+}
+function paintCell(stepIdx, lightId){
+  const s = state.steps[stepIdx];
+  let current = s.cells[lightId];
+  if(typeof current !== 'string') current = null;
+  if(selectedColor === null) s.cells[lightId] = null;
+  else if(current && current.toLowerCase() === selectedColor.toLowerCase()) s.cells[lightId] = null;
+  else s.cells[lightId] = selectedColor;
+  applyActiveStep(playing ? playIndex : -1);
+  renderGrid();
+  persist();
+}
+
+function getMountOptions(){
+  const v = window.__viewer3d;
+  if(v && v.usingCustomModel) return Object.keys(v.customMaterials);
+  return POSITION_NAMES;
+}
+
+function render(){
+  pruneSelection();
+  renderGrid();
+  renderPalette();
+  renderPresetBar();
+  applyActiveStep(playing ? playIndex : -1);
+  if(window.__viewer3d){ window.__viewer3d.rebuildMarkers(); window.__viewer3d.renderMaterialList(); }
+}
+
+function renderPalette(){
+  const wrap = document.getElementById('palette');
+  let html = PRESETS.map(p => `<button class="swatchbtn${selectedColor && selectedColor.toLowerCase()===p.hex?' sel':''}" style="background:${p.hex}" data-hex="${p.hex}" title="${p.name}"></button>`).join('');
+  html += `<button class="swatchbtn off${selectedColor===null?' sel':''}" data-hex="off" title="Off / eraser"></button>`;
+  html += `<div class="customwrap"><input type="color" id="customColor" value="${selectedColor ? selectedColor : '#ffffff'}"> Custom</div>`;
+  html += selectedColor ? `<span class="codelabel" title="Currently selected paint color">${escapeAttr(colorTitle(selectedColor))}</span>` : `<span class="codelabel">Eraser</span>`;
+  wrap.innerHTML = html;
+  wrap.querySelectorAll('.swatchbtn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      selectedColor = btn.dataset.hex === 'off' ? null : btn.dataset.hex;
+      renderPalette();
+    });
+  });
+  document.getElementById('customColor').addEventListener('input', e => {
+    selectedColor = e.target.value;
+    renderPalette();
+  });
+}
+
+function renderGrid(){
+  const table = document.getElementById('grid');
+  if(state.lights.length === 0){
+    table.innerHTML = '<tr><td class="empty-state">No lights yet — click "Add Light" to start.</td></tr>';
+    return;
+  }
+  const mountOptions = getMountOptions();
+  let html = '<thead><tr><th class="corner">Step</th>';
+  state.lights.forEach((l,i) => {
+    html += `<th class="${selectedLights.has(l.id) ? 'selcol' : ''}">
+      <div class="lh">
+        <div class="ind" data-role="indicator" data-id="${l.id}"></div>
+        <div class="movrow">
+          <button class="mv" data-role="moveLeft" data-id="${l.id}" title="Move this column left"${i === 0 ? ' disabled' : ''}>◀</button>
+          <span class="lnum">Light ${i+1}</span>
+          <button class="mv" data-role="moveRight" data-id="${l.id}" title="Move this column right"${i === state.lights.length-1 ? ' disabled' : ''}>▶</button>
+        </div>
+        <label class="selbox" title="Include this column when saving a preset pattern"><input type="checkbox" data-role="selLight" data-id="${l.id}"${selectedLights.has(l.id) ? ' checked' : ''}> Group</label>
+        <select data-role="position" data-id="${l.id}">
+          <option value="">Unassigned</option>
+          ${mountOptions.map(p => `<option value="${escapeAttr(p)}"${l.position===p?' selected':''}>${escapeAttr(p)}</option>`).join('')}
+        </select>
+        <input type="text" value="${escapeAttr(l.name)}" data-role="rename" data-id="${l.id}">
+        <div class="rowbtns">
+          <button class="dup${stepClipboard && stepClipboard.fromId === l.id ? ' src' : ''}" data-role="copySteps" data-id="${l.id}" title="Copy this column's step colors (nothing else)">${stepClipboard && stepClipboard.fromId === l.id ? 'Copied ✓' : 'Copy'}</button>
+          <button class="dup" data-role="pasteSteps" data-id="${l.id}" ${!stepClipboard || stepClipboard.fromId === l.id ? 'disabled' : ''} title="${stepClipboard ? 'Paste the copied step colors here (header stays untouched)' : 'Copy a column first'}">Paste</button>
+          <button class="rm" data-role="removeLight" data-id="${l.id}">Remove</button>
+        </div>
+      </div>
+    </th>`;
+  });
+  html += '</tr></thead><tbody>';
+  if(state.steps.length === 0){
+    html += `<tr><td colspan="${state.lights.length+1}" class="empty-state">No steps yet — click "Add Step".</td></tr>`;
+  }
+  state.steps.forEach((s, idx) => {
+    html += `<tr data-step="${idx}"><th>
+      <div class="rh">
+        <span class="snum">${idx+1}</span>
+        <button class="icon" title="Up" data-role="up" data-idx="${idx}">↑</button>
+        <button class="icon" title="Down" data-role="down" data-idx="${idx}">↓</button>
+        <button class="icon" title="Duplicate" data-role="dup" data-idx="${idx}">⧉</button>
+        <button class="icon danger" title="Delete" data-role="delStep" data-idx="${idx}">×</button>
+      </div>
+    </th>`;
+    state.lights.forEach(l => {
+      const c = s.cells[l.id];
+      const label = c && state.showCodes ? colorCode(c) : '';
+      const style = c ? `background:${c};color:${readableOn(c)}` : 'background:var(--cell-off)';
+      html += `<td><button class="cellbtn" style="${style}" title="${c ? escapeAttr(colorTitle(c)) : 'Off'}" data-role="cell" data-idx="${idx}" data-light="${l.id}">${label}</button></td>`;
+    });
+    html += '</tr>';
+  });
+  html += '</tbody>';
+  table.innerHTML = html;
+}
+
+function applyActiveStep(activeIdx){
+  updateHeaderIndicators(activeIdx);
+  update3DMarkers(activeIdx);
+}
+
+function updateHeaderIndicators(activeIdx){
+  const active = activeIdx >= 0 ? state.steps[activeIdx] : null;
+  document.querySelectorAll('[data-role=indicator]').forEach(dot => {
+    const c = active ? active.cells[dot.dataset.id] : null;
+    dot.classList.toggle('on', !!c);
+    dot.style.background = c ? c : 'var(--cell-off)';
+    dot.style.setProperty('--glow', c || 'transparent');
+  });
+}
+
+function escapeAttr(s){ return String(s).replace(/"/g,'&quot;'); }
+
+// ---- event delegation ----
+document.getElementById('grid').addEventListener('click', e => {
+  const t = e.target;
+  const role = t.dataset.role;
+  if(role === 'cell') paintCell(+t.dataset.idx, t.dataset.light);
+  else if(role === 'removeLight') removeLight(t.dataset.id);
+  else if(role === 'moveLeft') moveLight(t.dataset.id, -1);
+  else if(role === 'moveRight') moveLight(t.dataset.id, 1);
+  else if(role === 'copySteps') copySteps(t.dataset.id);
+  else if(role === 'pasteSteps') pasteSteps(t.dataset.id);
+  else if(role === 'up') moveStep(+t.dataset.idx, -1);
+  else if(role === 'down') moveStep(+t.dataset.idx, 1);
+  else if(role === 'dup') duplicateStep(+t.dataset.idx);
+  else if(role === 'delStep') removeStep(+t.dataset.idx);
+});
+document.getElementById('grid').addEventListener('input', e => {
+  const t = e.target;
+  if(t.dataset.role === 'rename'){
+    const l = state.lights.find(x => x.id === t.dataset.id);
+    if(l){ l.name = t.value; persist(); }
+  }
+});
+document.getElementById('grid').addEventListener('change', e => {
+  const t = e.target;
+  if(t.dataset.role === 'selLight'){
+    if(t.checked) selectedLights.add(t.dataset.id); else selectedLights.delete(t.dataset.id);
+    t.closest('th').classList.toggle('selcol', t.checked);
+    renderPresetBar();
+    return;
+  }
+  if(t.dataset.role === 'position'){
+    const l = state.lights.find(x => x.id === t.dataset.id);
+    if(l){
+      l.position = t.value; persist();
+      if(window.__viewer3d){ window.__viewer3d.rebuildMarkers(); window.__viewer3d.renderMaterialList(); }
+      applyActiveStep(playing ? playIndex : -1);
+    }
+  }
+});
+
+document.getElementById('addLight').onclick = addLight;
+document.getElementById('addStep').onclick = addStep;
+
+document.getElementById('clearAll').onclick = () => {
+  if(!confirm('Clear all lights and steps?')) return;
+  stopPlayback();
+  state = { bpm: state.bpm, lights: [], steps: [], autoDetect: state.autoDetect, materialColors: state.materialColors, view: state.view, showCodes: state.showCodes, codeFormat: state.codeFormat };
+  render(); persist();
+};
+
+// ---- randomize (with chosen colors) ----
+// Both dropdowns are built from PRESETS so they always match the palette.
+(function buildRandomSelects(){
+  const opts = PRESETS.map(p => `<option value="${p.hex}">${p.name}</option>`).join('') + '<option value="custom">Custom…</option>';
+  document.getElementById('randColorA').innerHTML = opts;
+  document.getElementById('randColorB').innerHTML = '<option value="none">None</option>' + opts;
+})();
+document.getElementById('randColorA').addEventListener('change', e => {
+  document.getElementById('randColorACustom').style.display = e.target.value === 'custom' ? 'inline-block' : 'none';
+});
+document.getElementById('randColorB').addEventListener('change', e => {
+  document.getElementById('randColorBCustom').style.display = e.target.value === 'custom' ? 'inline-block' : 'none';
+});
+document.getElementById('randGenerate').onclick = () => {
+  if(state.lights.length === 0){ setStatus('Add at least one light first.'); return; }
+  if(state.steps.length === 0){ for(let i=0;i<12;i++) state.steps.push(newStep()); }
+  const aSel = document.getElementById('randColorA').value;
+  const colorA = aSel === 'custom' ? document.getElementById('randColorACustom').value : aSel;
+  const bSel = document.getElementById('randColorB').value;
+  const colorB = bSel === 'none' ? null : (bSel === 'custom' ? document.getElementById('randColorBCustom').value : bSel);
+  const options = colorB ? [colorA, colorB, null] : [colorA, null];
+  state.steps.forEach(s => state.lights.forEach(l => {
+    s.cells[l.id] = options[Math.floor(Math.random()*options.length)];
+  }));
+  render(); persist();
+  setStatus('Randomized using the selected color(s).');
+};
+
+// ---- BPM ----
+const bpmRange = document.getElementById('bpmRange');
+const bpmNum = document.getElementById('bpmNum');
+function setBpm(v){
+  v = Math.min(1000, Math.max(30, v|0));
+  state.bpm = v; bpmRange.value = v; bpmNum.value = v; persist();
+}
+bpmRange.addEventListener('input', () => setBpm(+bpmRange.value));
+bpmNum.addEventListener('change', () => setBpm(+bpmNum.value));
+
+// ---- playback ----
+function stopPlayback(){
+  playing = false;
+  clearTimeout(playTimer);
+  document.getElementById('playBtn').textContent = '▶ Play';
+  document.querySelectorAll('tr.playing').forEach(r => r.classList.remove('playing'));
+  applyActiveStep(-1);
+}
+function startPlayback(){
+  if(state.steps.length === 0 || state.lights.length === 0){ setStatus('Add lights and steps before playing.'); return; }
+  playing = true; playIndex = 0;
+  document.getElementById('playBtn').textContent = '⏸ Pause';
+  step();
+}
+function step(){
+  if(!playing) return;
+  document.querySelectorAll('tr.playing').forEach(r => r.classList.remove('playing'));
+  const row = document.querySelector(`tr[data-step="${playIndex}"]`);
+  if(row) row.classList.add('playing');
+  applyActiveStep(playIndex);
+  const dur = Math.max(10, 60000 / state.bpm);
+  playTimer = setTimeout(() => { playIndex = (playIndex + 1) % state.steps.length; step(); }, dur);
+}
+document.getElementById('playBtn').onclick = () => playing ? stopPlayback() : startPlayback();
+
+// ---- persistence ----
+function persist(){ try{ localStorage.setItem('lightPatternEditor.autosave', JSON.stringify(state)); }catch(e){} }
+document.getElementById('saveLocal').onclick = () => { persist(); setStatus('Saved to this browser.'); };
+document.getElementById('loadLocal').onclick = () => {
+  try{
+    const raw = localStorage.getItem('lightPatternEditor.autosave');
+    if(!raw){ setStatus('No saved pattern found in this browser.'); return; }
+    state = JSON.parse(raw);
+    sanitize();
+    bpmRange.value = state.bpm; bpmNum.value = state.bpm;
+    syncSettingsUI();
+    render();
+    setStatus('Loaded saved pattern.');
+  }catch(e){ setStatus('Could not load saved pattern.'); }
+};
+
+// ---- export / import ----
+document.getElementById('exportJson').onclick = () => {
+  const blob = new Blob([JSON.stringify(state, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'light-pattern.json';
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+  setStatus('Exported light-pattern.json');
+};
+document.getElementById('importJsonBtn').onclick = () => document.getElementById('importJson').click();
+document.getElementById('importJson').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try{
+      const data = JSON.parse(reader.result);
+      if(!data.lights || !data.steps) throw new Error('bad format');
+      stopPlayback();
+      state = data;
+      sanitize();
+      bpmRange.value = state.bpm; bpmNum.value = state.bpm;
+      syncSettingsUI();
+      render();
+      setStatus('Imported ' + file.name);
+    }catch(err){ setStatus('Import failed: invalid JSON file.'); }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+});
+
+// Round a color to the closest palette entry. Straight RGB distance gets this wrong
+// (a pale green lands nearer cyan than green), so match on hue instead and treat
+// anything washed out as white.
+function rgbToHsv(rgb){
+  const r = rgb[0]/255, g = rgb[1]/255, b = rgb[2]/255;
+  const max = Math.max(r,g,b), min = Math.min(r,g,b), d = max - min;
+  let h = 0;
+  if(d){
+    if(max === r) h = 60 * (((g-b)/d) % 6);
+    else if(max === g) h = 60 * ((b-r)/d + 2);
+    else h = 60 * ((r-g)/d + 4);
+  }
+  return { h: (h + 360) % 360, s: max ? d/max : 0, v: max };
+}
+const WHITE_HEX = '#ffffff';
+function nearestPreset(c){
+  const rgb = hexToRgb(c);
+  if(!rgb) return null;
+  const { h, s } = rgbToHsv(rgb);
+  if(s < 0.22) return WHITE_HEX;                    // barely any color left — call it white
+  let best = null, bestD = Infinity;
+  PRESETS.forEach(p => {
+    if(p.hex === WHITE_HEX) return;
+    const ph = rgbToHsv(hexToRgb(p.hex)).h;
+    let d = Math.abs(h - ph);
+    if(d > 180) d = 360 - d;                        // hue wraps around
+    if(d < bestD){ bestD = d; best = p.hex; }
+  });
+  return best;
+}
+document.getElementById('snapColors').onclick = () => {
+  let changed = 0;
+  state.steps.forEach(s => state.lights.forEach(l => {
+    const c = normHex(s.cells[l.id]);
+    if(!c) return;
+    const snapped = nearestPreset(c);
+    if(snapped && snapped !== c){ s.cells[l.id] = snapped; changed++; }
+  }));
+  if(!changed){ setStatus('Every cell is already on a palette color.'); return; }
+  applyActiveStep(playing ? playIndex : -1);
+  renderGrid(); persist();
+  setStatus('Snapped ' + changed + ' cell' + (changed === 1 ? '' : 's') + ' to full-intensity palette colors.');
+};
+
+function setStatus(msg){ document.getElementById('status').textContent = msg; }
+
+/* ====================================================================
+   Preset patterns
+   A preset is colors only: an array of columns, each an array of
+   per-step colors (null = off). Light ids, names and mount points are
+   never stored, so a preset drops onto any columns in any file.
+   ==================================================================== */
+
+function pruneSelection(){
+  const live = new Set(state.lights.map(l => l.id));
+  [...selectedLights].forEach(id => { if(!live.has(id)) selectedLights.delete(id); });
+}
+function groupedLights(){
+  pruneSelection();
+  return state.lights.filter(l => selectedLights.has(l.id));   // always left-to-right grid order
+}
+
+function normalizePreset(p){
+  if(!p || typeof p !== 'object') return null;
+  const raw = Array.isArray(p.columns) ? p.columns : null;
+  if(!raw || !raw.length) return null;
+  const columns = raw.filter(Array.isArray).map(col => col.map(c => normHex(c)));
+  if(!columns.length) return null;
+  const len = columns.reduce((m,c) => Math.max(m, c.length), 0);
+  if(!len) return null;
+  columns.forEach(c => { while(c.length < len) c.push(null); });
+  const name = typeof p.name === 'string' && p.name.trim() ? p.name.trim().slice(0,60) : 'Untitled pattern';
+  return { id: uid(), name, columns };
+}
+
+function loadPresets(){
+  try{
+    const raw = localStorage.getItem(PRESET_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    presets = (Array.isArray(parsed) ? parsed : []).map(normalizePreset).filter(Boolean);
+  }catch(e){ presets = []; }
+}
+function savePresets(){ try{ localStorage.setItem(PRESET_KEY, JSON.stringify(presets)); }catch(e){ setStatus('Browser storage is full or blocked — export your patterns to a file instead.'); } }
+
+function renderPresetBar(){
+  const n = groupedLights().length;
+  const html = '<b>' + n + '</b> column' + (n === 1 ? '' : 's') + ' grouped';
+  ['selCount','groupCount'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.innerHTML = html;
+  });
+  const btn = document.getElementById('clearGroupSteps');
+  if(btn) btn.disabled = n === 0;
+}
+
+function clearGroupSteps(){
+  const cols = groupedLights();
+  if(!cols.length){ setStatus('Tick "Group" on the columns you want to clear first.'); return; }
+  if(!state.steps.length){ setStatus('There are no steps to clear.'); return; }
+  if(!confirm('Clear every step color from ' + cols.length + ' grouped column' + (cols.length === 1 ? '' : 's') + '?\n\nNames, mount points and all other columns stay as they are.')) return;
+  cols.forEach(l => state.steps.forEach(s => s.cells[l.id] = null));
+  applyActiveStep(playing ? playIndex : -1);
+  renderGrid(); persist();
+  setStatus('Cleared ' + state.steps.length + ' step' + (state.steps.length === 1 ? '' : 's') + ' from ' + cols.length + ' column' + (cols.length === 1 ? '' : 's') + '.');
+}
+document.getElementById('clearGroupSteps').onclick = clearGroupSteps;
+
+function presetSwatches(p){
+  const stepCount = p.columns[0].length;
+  const rows = Math.min(stepCount, 14);
+  return '<div class="mini">' + p.columns.slice(0,10).map(col => {
+    let cells = '';
+    for(let i=0;i<rows;i++){
+      const c = col[Math.floor(i * stepCount / rows)];
+      cells += '<i style="' + (c ? 'background:' + c : '') + '"></i>';
+    }
+    return '<div class="minicol">' + cells + '</div>';
+  }).join('') + '</div>';
+}
+
+function renderPresets(){
+  const wrap = document.getElementById('presetList');
+  if(!presets.length){
+    wrap.innerHTML = '<p class="footer-note" style="margin:0;">No saved patterns yet. Tick "Group" on a few columns and click "Save grouped columns".</p>';
+    renderPresetBar();
+    return;
+  }
+  wrap.innerHTML = presets.map(p => `
+    <div class="presetitem" data-id="${p.id}">
+      ${presetSwatches(p)}
+      <span class="pn">${escapeHtml(p.name)}</span>
+      <span class="meta">${p.columns.length} column${p.columns.length === 1 ? '' : 's'} × ${p.columns[0].length} step${p.columns[0].length === 1 ? '' : 's'}</span>
+      <span class="spacer"></span>
+      <button class="primary" data-act="apply" data-id="${p.id}">Apply</button>
+      <button data-act="rename" data-id="${p.id}">Rename</button>
+      <button data-act="export" data-id="${p.id}">Export</button>
+      <button class="danger" data-act="delete" data-id="${p.id}">Delete</button>
+    </div>`).join('');
+  renderPresetBar();
+}
+function escapeHtml(s){ return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+document.getElementById('savePreset').onclick = () => {
+  const cols = groupedLights();
+  if(!cols.length){ setStatus('Tick "Group" on at least one light column first.'); return; }
+  if(!state.steps.length){ setStatus('Add some steps before saving a pattern.'); return; }
+  const field = document.getElementById('presetName');
+  const name = field.value.trim() || 'Pattern ' + (presets.length + 1);
+  presets.push({
+    id: uid(),
+    name: name.slice(0,60),
+    columns: cols.map(l => state.steps.map(s => normHex(s.cells[l.id])))
+  });
+  savePresets(); renderPresets();
+  field.value = '';
+  setStatus('Saved "' + name + '" — ' + cols.length + ' column' + (cols.length === 1 ? '' : 's') + ' × ' + state.steps.length + ' steps.');
+};
+
+function applyPreset(id){
+  const p = presets.find(x => x.id === id);
+  if(!p) return;
+  const mode = document.getElementById('applyMode').value;
+  const need = p.columns[0].length;
+
+  let added = 0;
+  while(state.steps.length < need){ state.steps.push(newStep()); added++; }
+
+  let targets;
+  if(mode === 'new'){
+    targets = p.columns.map(() => {
+      const l = newLight();
+      state.lights.push(l);
+      state.steps.forEach(s => s.cells[l.id] = null);
+      return l;
+    });
+    selectedLights = new Set(targets.map(l => l.id));
+  }else{
+    targets = groupedLights();
+    if(!targets.length){ setStatus('Nothing to apply to — tick "Group" on the columns you want, or switch "Apply to" to new columns.'); return; }
+  }
+
+  // More columns than the preset holds? Tile the pattern across them.
+  targets.forEach((l, i) => {
+    const col = p.columns[i % p.columns.length];
+    state.steps.forEach((s, si) => { s.cells[l.id] = si < col.length ? col[si] : null; });
+  });
+
+  render(); persist();
+  const notes = [];
+  if(added) notes.push(added + ' step' + (added === 1 ? '' : 's') + ' added to fit');
+  if(mode !== 'new' && targets.length > p.columns.length) notes.push('pattern repeated across the extra columns');
+  if(mode !== 'new' && targets.length < p.columns.length) notes.push('only the first ' + targets.length + ' of ' + p.columns.length + ' columns used');
+  setStatus('Applied "' + p.name + '" to ' + targets.length + ' column' + (targets.length === 1 ? '' : 's') + (notes.length ? ' (' + notes.join('; ') + ').' : '.'));
+}
+
+document.getElementById('presetList').addEventListener('click', e => {
+  const act = e.target.dataset.act;
+  if(!act) return;
+  const id = e.target.dataset.id;
+  const p = presets.find(x => x.id === id);
+  if(!p) return;
+  if(act === 'apply') applyPreset(id);
+  else if(act === 'delete'){
+    if(!confirm('Delete the pattern "' + p.name + '"?')) return;
+    presets = presets.filter(x => x.id !== id);
+    savePresets(); renderPresets();
+    setStatus('Deleted "' + p.name + '".');
+  }else if(act === 'rename'){
+    const n = prompt('New name for this pattern:', p.name);
+    if(n === null) return;
+    p.name = (n.trim() || p.name).slice(0,60);
+    savePresets(); renderPresets();
+  }else if(act === 'export') downloadPresets([p], slug(p.name) + '.pattern.json');
+});
+
+function slug(s){ return String(s).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'') || 'pattern'; }
+function downloadPresets(list, filename){
+  const payload = list.length === 1
+    ? { type: PRESET_FILE_TYPE, version: 1, name: list[0].name, columns: list[0].columns }
+    : { type: PRESET_FILE_TYPE, version: 1, patterns: list.map(p => ({ name: p.name, columns: p.columns })) };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+  setStatus('Exported ' + filename);
+}
+
+document.getElementById('exportAllPresets').onclick = () => {
+  if(!presets.length){ setStatus('No saved patterns to export.'); return; }
+  downloadPresets(presets, 'light-patterns.json');
+};
+
+document.getElementById('importPresetBtn').onclick = () => document.getElementById('importPreset').click();
+document.getElementById('importPreset').addEventListener('change', e => {
+  const files = [...e.target.files];
+  e.target.value = '';
+  if(!files.length) return;
+  let done = 0, imported = 0, failed = 0;
+  files.forEach(file => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      try{
+        const data = JSON.parse(reader.result);
+        const found = extractPresets(data);
+        if(!found.length) throw new Error('nothing usable');
+        found.forEach(p => presets.push(p));
+        imported += found.length;
+      }catch(err){ failed++; }
+      if(++done === files.length){
+        savePresets(); renderPresets();
+        setStatus(imported
+          ? 'Imported ' + imported + ' pattern' + (imported === 1 ? '' : 's') + (failed ? ' (' + failed + ' file' + (failed === 1 ? '' : 's') + ' skipped).' : '.')
+          : 'Import failed — no pattern data found in that file.');
+      }
+    };
+    reader.readAsText(file);
+  });
+});
+
+// Accepts a single preset, a multi-pattern pack, a bare array, or a full
+// editor export (in which case every light column becomes one preset column).
+function extractPresets(data){
+  if(Array.isArray(data)) return data.map(normalizePreset).filter(Boolean);
+  if(!data || typeof data !== 'object') return [];
+  if(Array.isArray(data.patterns)) return data.patterns.map(normalizePreset).filter(Boolean);
+  const single = normalizePreset(data);
+  if(single) return [single];
+  if(Array.isArray(data.lights) && Array.isArray(data.steps) && data.lights.length && data.steps.length){
+    const p = normalizePreset({
+      name: 'Imported pattern',
+      columns: data.lights.map(l => data.steps.map(s => normHex(s && s.cells ? s.cells[l.id] : null)))
+    });
+    return p ? [p] : [];
+  }
+  return [];
+}
+
+document.getElementById('selAll').onclick = () => {
+  selectedLights = new Set(state.lights.map(l => l.id));
+  renderGrid(); renderPresetBar();
+};
+document.getElementById('selNone').onclick = () => {
+  selectedLights.clear();
+  renderGrid(); renderPresetBar();
+};
+
+// ---- side panel: tabs + collapse ----
+function showTab(name){
+  document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
+  document.querySelectorAll('.tabpanel').forEach(p => p.classList.toggle('active', p.id === 'tab-' + name));
+  // the 3D canvas has no size while its tab is hidden, so tell the viewer to re-measure
+  if(name === 'preview') requestAnimationFrame(() => window.dispatchEvent(new Event('resize')));
+  try{ localStorage.setItem('lightPatternEditor.tab', name); }catch(e){}
+}
+document.getElementById('tabs').addEventListener('click', e => {
+  if(e.target.dataset.tab) showTab(e.target.dataset.tab);
+});
+document.getElementById('toggleSide').onclick = () => {
+  const hidden = document.body.classList.toggle('side-collapsed');
+  document.getElementById('toggleSide').textContent = hidden ? '⟨ Show panel' : 'Hide panel ⟩';
+  if(!hidden) requestAnimationFrame(() => window.dispatchEvent(new Event('resize')));
+};
+
+// ---- auto-detect fields + viewport sliders ----
+function syncSettingsUI(){
+  document.getElementById('showCodes').checked = state.showCodes;
+  document.getElementById('codeFormat').value = state.codeFormat;
+  document.getElementById('detectPrefix').value = state.autoDetect.prefix;
+  document.getElementById('detectSuffix').value = state.autoDetect.suffix;
+  ['bloom','glow','halo','brightness'].forEach(k => {
+    const id = k === 'brightness' ? 'bright' : k;
+    document.getElementById(id + 'Range').value = state.view[k];
+    document.getElementById(id + 'Val').textContent = (+state.view[k]).toFixed(2).replace(/0$/,'');
+  });
+  if(window.__viewer3d) window.__viewer3d.applyView();
+}
+document.getElementById('showCodes').addEventListener('change', e => { state.showCodes = e.target.checked; renderGrid(); persist(); });
+document.getElementById('codeFormat').addEventListener('change', e => { state.codeFormat = e.target.value; renderGrid(); persist(); });
+document.getElementById('detectPrefix').addEventListener('input', e => { state.autoDetect.prefix = e.target.value; persist(); });
+document.getElementById('detectSuffix').addEventListener('input', e => { state.autoDetect.suffix = e.target.value; persist(); });
+document.getElementById('rescanBtn').onclick = () => {
+  const v = window.__viewer3d;
+  if(!v || !v.usingCustomModel){ setStatus('Import a 3D model first, then re-scan.'); return; }
+  setStatus(v.autoDetectLights());
+};
+[['bloomRange','bloom','bloomVal'],['glowRange','glow','glowVal'],['haloRange','halo','haloVal'],['brightRange','brightness','brightVal']].forEach(([rid,key,vid]) => {
+  document.getElementById(rid).addEventListener('input', e => {
+    state.view[key] = +e.target.value;
+    document.getElementById(vid).textContent = (+e.target.value).toFixed(2).replace(/0$/,'');
+    if(window.__viewer3d) window.__viewer3d.applyView();
+    applyActiveStep(playing ? playIndex : -1);
+    persist();
+  });
+});
+document.getElementById('viewReset').onclick = () => {
+  state.view = { ...VIEW_DEFAULTS };
+  syncSettingsUI();
+  applyActiveStep(playing ? playIndex : -1);
+  persist();
+};
+document.getElementById('resetPaintBtn').onclick = () => {
+  state.materialColors = {};
+  if(window.__viewer3d) window.__viewer3d.renderMaterialList();
+  applyActiveStep(playing ? playIndex : -1);
+  persist();
+};
+
+// ---- 3D viewer ----
+// Colors picked in the UI are sRGB hex values; the renderer works in linear light.
+function srgb(hex){ return new THREE.Color(hex).convertSRGBToLinear(); }
+function toHex(linearColor){ return '#' + linearColor.clone().convertLinearToSRGB().getHexString(); }
+
+function initViewer3D(){
+  const statusEl = document.getElementById('viewer3d-status');
+  if(typeof THREE === 'undefined'){
+    statusEl.textContent = "3D preview couldn't load — it needs an internet connection the first time you open this file.";
+    return;
+  }
+  statusEl.style.display = 'none';
+  const canvas = document.getElementById('viewer3d');
+  const renderer = new THREE.WebGLRenderer({canvas, antialias:true});
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  const scene = new THREE.Scene();
+  const BG = srgb(0x080a11);
+  scene.background = BG;
+  scene.fog = new THREE.FogExp2(BG.getHex(), 0.055);
+  const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
+  camera.position.set(5, 3.3, 6);
+
+  // ---- post-processing: selective, hue-preserving bloom (falls back to plain rendering if the add-ons didn't load) ----
+  const canBloom = !!(THREE.EffectComposer && THREE.RenderPass && THREE.UnrealBloomPass && THREE.ShaderPass);
+  let bloomComposer = null, finalComposer = null, bloomPass = null, finalPass = null;
+  if(!canBloom){
+    renderer.outputEncoding = THREE.sRGBEncoding;
+    setStatus('Bloom add-on scripts did not load (check your internet connection) — showing the preview without bloom.');
+  }
+
+  // ---- lighting ----
+  const lightRig = [];
+  function addRigLight(light, base){ light.userData.base = base; lightRig.push(light); scene.add(light); return light; }
+  addRigLight(new THREE.HemisphereLight(0xc4d4ff, 0x1b2030, 1), 0.55);
+  const key = addRigLight(new THREE.DirectionalLight(0xffffff, 1), 1.5);   key.position.set(5, 8, 4);
+  const fill = addRigLight(new THREE.DirectionalLight(0x7fa6ff, 1), 0.6);  fill.position.set(-6, 3, -3);
+  const rim = addRigLight(new THREE.DirectionalLight(0xdfe6ff, 1), 0.8);   rim.position.set(-2, 4, 7);
+
+  // Soft studio environment so glossy / metallic paint has something to reflect
+  try{
+    const pmrem = new THREE.PMREMGenerator(renderer);
+    const env = new THREE.Scene();
+    const R = 50, dome = new THREE.SphereGeometry(R, 32, 16), cols = [], pa = dome.attributes.position;
+    const top = new THREE.Color(0.22,0.28,0.45), hor = new THREE.Color(0.05,0.065,0.11), bot = new THREE.Color(0.01,0.01,0.02);
+    for(let i=0;i<pa.count;i++){
+      const y = pa.getY(i)/R;
+      const c = y > 0 ? hor.clone().lerp(top, y) : hor.clone().lerp(bot, -y);
+      cols.push(c.r, c.g, c.b);
+    }
+    dome.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
+    env.add(new THREE.Mesh(dome, new THREE.MeshBasicMaterial({vertexColors:true, side:THREE.BackSide})));
+    [[26,8,0,34,0,2.2],[8,22,-36,10,10,1.6],[8,22,36,10,-10,1.6],[20,6,0,12,-38,1.0]].forEach(([w,h,x,y,z,i]) => {
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(w,h), new THREE.MeshBasicMaterial({color:new THREE.Color(i,i,i), side:THREE.DoubleSide}));
+      m.position.set(x,y,z); m.lookAt(0,0,0); env.add(m);
+    });
+    scene.environment = pmrem.fromScene(env, 0.03).texture;
+    pmrem.dispose();
+  }catch(err){ console.warn('Environment setup skipped', err); }
+
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry(60,60), new THREE.MeshStandardMaterial({color:srgb(0x121722), roughness:0.8, metalness:0}));
+  ground.userData.envScale = 0.12;
+  ground.rotation.x = -Math.PI/2;
+  scene.add(ground);
+
+  // ---- generic vehicle ----
+  const genericPaint = [
+    { key:'generic:Body',   label:'Body',   mat:new THREE.MeshStandardMaterial({color:srgb(0x33405f), roughness:0.32, metalness:0.55}) },
+    { key:'generic:Cabin',  label:'Cabin',  mat:new THREE.MeshStandardMaterial({color:srgb(0x2a3350), roughness:0.25, metalness:0.4}) },
+    { key:'generic:Wheels', label:'Wheels', mat:new THREE.MeshStandardMaterial({color:srgb(0x15161a), roughness:0.85, metalness:0.1}) }
+  ];
+  genericPaint.forEach(p => { p.orig = { color: p.mat.color.clone() }; });
+  const [bodyMat, cabinMat, wheelMat] = genericPaint.map(p => p.mat);
+
+  const car = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.BoxGeometry(4,0.9,1.8), bodyMat);
+  body.position.y = 0.65;
+  car.add(body);
+  const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.9,0.7,1.6), cabinMat);
+  cabin.position.set(-0.1,1.45,0);
+  car.add(cabin);
+  const wheelGeo = new THREE.CylinderGeometry(0.38,0.38,0.3,16);
+  [[1.3,-0.9],[1.3,0.9],[-1.3,-0.9],[-1.3,0.9]].forEach(([x,z]) => {
+    const w = new THREE.Mesh(wheelGeo, wheelMat);
+    w.rotation.z = Math.PI/2;
+    w.position.set(x,0.38,z);
+    car.add(w);
+  });
+  scene.add(car);
+
+  const POSITIONS = {
+    "Front Left":[2.05,0.75,-0.85], "Front Right":[2.05,0.75,0.85],
+    "Rear Left":[-2.05,0.75,-0.85], "Rear Right":[-2.05,0.75,0.85],
+    "Roof Left":[-0.1,1.85,-0.5], "Roof Right":[-0.1,1.85,0.5],
+    "Mirror Left":[0.9,1.15,-1.0], "Mirror Right":[0.9,1.15,1.0],
+    "Grille Left":[2.02,0.55,-0.4], "Grille Right":[2.02,0.55,0.4]
+  };
+  const markerGeo = new THREE.SphereGeometry(0.11,16,16);
+  const markers = {};
+  let usingCustomModel = false;
+  let customModel = null;
+  let customMaterials = {};
+  let materialOriginals = {};
+
+  function rebuildMarkers(){
+    Object.values(markers).forEach(m => { car.remove(m.mesh); car.remove(m.pointLight); });
+    for(const k in markers) delete markers[k];
+    if(usingCustomModel) return;
+    state.lights.forEach(l => {
+      const pos = POSITIONS[l.position];
+      if(!pos) return;
+      const mat = new THREE.MeshStandardMaterial({color:0x08090c, roughness:0.5, emissive:0x000000, emissiveIntensity:0});
+      const mesh = new THREE.Mesh(markerGeo, mat);
+      mesh.position.set(pos[0], pos[1], pos[2]);
+      car.add(mesh);
+      const pl = new THREE.PointLight(0xffffff, 0, 4.5);
+      pl.position.set(pos[0], pos[1], pos[2]);
+      car.add(pl);
+      markers[l.id] = { mesh, pointLight: pl };
+    });
+  }
+  rebuildMarkers();
+
+  // ---- halo / lens-flare sprites ----
+  const haloTexture = (function(){
+    const c = document.createElement('canvas'); c.width = c.height = 256;
+    const g = c.getContext('2d');
+    const rg = g.createRadialGradient(128,128,0,128,128,128);
+    rg.addColorStop(0,'rgba(255,255,255,1)'); rg.addColorStop(0.05,'rgba(255,255,255,0.9)');
+    rg.addColorStop(0.16,'rgba(255,255,255,0.38)'); rg.addColorStop(0.38,'rgba(255,255,255,0.1)');
+    rg.addColorStop(0.7,'rgba(255,255,255,0.025)'); rg.addColorStop(1,'rgba(255,255,255,0)');
+    g.fillStyle = rg; g.fillRect(0,0,256,256);
+    // thin horizontal streak, like an anamorphic lens flare
+    g.save(); g.translate(128,128); g.scale(1,0.035);
+    const sg = g.createRadialGradient(0,0,0,0,0,128);
+    sg.addColorStop(0,'rgba(255,255,255,0.95)'); sg.addColorStop(0.3,'rgba(255,255,255,0.3)'); sg.addColorStop(1,'rgba(255,255,255,0)');
+    g.fillStyle = sg; g.fillRect(-128,-128/0.035,256,256/0.035);
+    g.restore();
+    const t = new THREE.CanvasTexture(c);
+    return t;
+  })();
+  const haloSprites = [];
+  let activeHalos = [];   // [{pos:Vector3, r:Number, color:Color, sprite}]
+  function setHalos(list){
+    while(haloSprites.length < list.length && haloSprites.length < 400){
+      const sp = new THREE.Sprite(new THREE.SpriteMaterial({map:haloTexture, blending:THREE.AdditiveBlending, depthWrite:false, transparent:true, fog:false}));
+      sp.visible = false; scene.add(sp); haloSprites.push(sp);
+    }
+    activeHalos = list.slice(0, haloSprites.length);
+    haloSprites.forEach((sp, i) => {
+      const h = activeHalos[i];
+      if(!h){ sp.visible = false; return; }
+      h.sprite = sp;
+      sp.material.color.copy(h.color).multiplyScalar(1.3);
+    });
+  }
+  const _dir = new THREE.Vector3();
+  function updateHalos(){
+    const k = state.view.halo;
+    activeHalos.forEach(h => {
+      const sp = h.sprite;
+      if(!sp) return;
+      if(k <= 0){ sp.visible = false; return; }
+      sp.visible = true;
+      _dir.copy(camera.position).sub(h.pos).normalize();
+      sp.position.copy(h.pos).addScaledVector(_dir, h.r * 1.1);   // nudge toward the camera so the lens doesn't hide its own halo
+      const size = (h.r * 2 + 0.12) * 6 * k;
+      sp.scale.set(size, size, 1);
+    });
+  }
+
+  // world-space bounds of every mesh that uses a given material (cached; the model doesn't move after import)
+  let haloBounds = {};
+  function computeHaloBounds(){
+    haloBounds = {};
+    if(!customModel) return;
+    customModel.updateMatrixWorld(true);
+    const total = new THREE.Box3().setFromObject(customModel), tv = new THREE.Vector3(); total.getSize(tv);
+    const limit = Math.max(tv.x, tv.y, tv.z) * 0.35;
+    customModel.traverse(o => {
+      if(!o.isMesh || !o.material) return;
+      const box = new THREE.Box3().setFromObject(o), sz = new THREE.Vector3(); box.getSize(sz);
+      const dim = Math.max(sz.x, sz.y, sz.z);
+      if(dim > limit) return;    // huge meshes (body shells that merely include a lens group) get bloom but no halo
+      const center = new THREE.Vector3(); box.getCenter(center);
+      (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => {
+        const name = Object.keys(customMaterials).find(n => customMaterials[n] === m);
+        if(!name) return;
+        (haloBounds[name] = haloBounds[name] || []).push({pos:center, r:dim/2});
+      });
+    });
+  }
+
+  // ---- viewport settings (bloom / glow / brightness) ----
+  function applyView(){
+    const v = state.view;
+    lightRig.forEach(l => { l.intensity = l.userData.base * v.brightness; });
+    scene.traverse(o => {
+      if(!o.isMesh || !o.material) return;
+      (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => {
+        if('envMapIntensity' in m) m.envMapIntensity = v.brightness * (o.userData.envScale !== undefined ? o.userData.envScale : 0.7);
+      });
+    });
+    if(bloomPass) bloomPass.strength = v.bloom;
+  }
+
+  // ---- material panel ----
+  function usedByLights(){
+    return new Set(state.lights.map(l => l.position).filter(Boolean));
+  }
+  function getPaintables(){
+    if(!usingCustomModel) return genericPaint;
+    const used = usedByLights();
+    return Object.keys(customMaterials).filter(n => !used.has(n)).map(n => ({
+      key: 'model:' + n, label: n, mat: customMaterials[n], orig: materialOriginals[n]
+    }));
+  }
+
+  function renderMaterialList(){
+    const lightEl = document.getElementById('lightMatList');
+    const el = document.getElementById('materialList');
+    if(!usingCustomModel){
+      lightEl.innerHTML = '<span class="footer-note">Generic vehicle — the lights sit on fixed mount points.</span>';
+    } else {
+      const used = [...usedByLights()].filter(n => customMaterials[n]);
+      lightEl.innerHTML = used.length ? used.map(n => {
+        const c = customMaterials[n].color ? toHex(customMaterials[n].color) : '#888888';
+        return `<span class="matchip"><span class="sw" style="background:${c}"></span>${escapeAttr(n)}</span>`;
+      }).join('') : '<span class="footer-note">None assigned yet — set a prefix/suffix above, or pick a material in a light\'s column header.</span>';
+    }
+    const items = getPaintables();
+    if(!items.length){
+      el.innerHTML = '<span class="footer-note">' + (usingCustomModel ? 'Every material in this model is assigned to a light.' : '') + '</span>';
+      return;
+    }
+    el.innerHTML = items.map((p, i) => {
+      const ov = state.materialColors[p.key];
+      const hex = ov || toHex(p.orig.color);
+      return `<div class="paintrow${ov ? ' changed' : ''}" data-i="${i}">
+        <input type="color" value="${hex}" data-role="paint" data-i="${i}" title="Change color">
+        <span class="pname" title="${escapeAttr(p.label)}">${escapeAttr(p.label)}</span>
+        <button class="rst" data-role="paintReset" data-i="${i}" title="Restore original color">↺</button>
+      </div>`;
+    }).join('');
+  }
+  document.getElementById('materialList').addEventListener('input', e => {
+    const t = e.target;
+    if(t.dataset.role !== 'paint') return;
+    const p = getPaintables()[+t.dataset.i];
+    if(!p) return;
+    state.materialColors[p.key] = t.value;
+    t.closest('.paintrow').classList.add('changed');
+    applyActiveStep(playing ? playIndex : -1);
+    persist();
+  });
+  document.getElementById('materialList').addEventListener('click', e => {
+    const t = e.target;
+    if(t.dataset.role !== 'paintReset') return;
+    const p = getPaintables()[+t.dataset.i];
+    if(!p) return;
+    delete state.materialColors[p.key];
+    renderMaterialList();
+    applyActiveStep(playing ? playIndex : -1);
+    persist();
+  });
+
+  // Applies color overrides (or originals) to every material that isn't a light lens
+  function applyPaint(){
+    getPaintables().forEach(p => {
+      const ov = state.materialColors[p.key];
+      if(ov) p.mat.color.copy(srgb(ov));
+      else if(p.orig) p.mat.color.copy(p.orig.color);
+      if(usingCustomModel && p.mat.emissive && p.orig){
+        p.mat.emissive.copy(p.orig.emissive);
+        p.mat.emissiveIntensity = p.orig.emissiveIntensity;
+      }
+    });
+  }
+
+  // ---- auto-detect light materials by prefix / suffix ----
+  function prettyName(name){
+    const p = state.autoDetect.prefix.trim().toLowerCase(), s = state.autoDetect.suffix.trim().toLowerCase();
+    let out = name;
+    if(p && out.toLowerCase().startsWith(p)) out = out.slice(p.length);
+    else if(s && out.toLowerCase().endsWith(s)) out = out.slice(0, out.length - s.length);
+    out = out.replace(/[_\-.]+/g, ' ').replace(/\s+/g, ' ').trim();
+    return out || name;
+  }
+  function matchesLightMaterial(name){
+    const p = state.autoDetect.prefix.trim().toLowerCase(), s = state.autoDetect.suffix.trim().toLowerCase();
+    if(!p && !s) return false;
+    const n = name.toLowerCase();
+    return (!!p && n.startsWith(p)) || (!!s && n.endsWith(s));
+  }
+  // Rebuilds the light columns from matching materials. Existing step colors carry over by column order.
+  function autoDetectLights(){
+    const p = state.autoDetect.prefix.trim(), s = state.autoDetect.suffix.trim();
+    if(!p && !s) return 'Enter a material prefix and/or suffix above, then re-scan.';
+    const names = Object.keys(customMaterials).filter(matchesLightMaterial)
+      .sort((a,b) => a.localeCompare(b, undefined, {numeric:true, sensitivity:'base'}));
+    if(!names.length){
+      state.lights.forEach(l => l.position = '');
+      persist(); rebuildMarkers(); renderGrid(); renderMaterialList(); applyActiveStep(playing ? playIndex : -1);
+      return 'No materials matched that prefix/suffix, so your existing columns were kept but their material assignments were cleared.';
+    }
+    const oldIds = state.lights.map(l => l.id);
+    const newLights = names.map(n => ({ id: uid(), name: prettyName(n), position: n }));
+    state.steps.forEach(st => {
+      const cells = {};
+      newLights.forEach((nl, i) => {
+        const prev = oldIds[i] ? st.cells[oldIds[i]] : null;
+        cells[nl.id] = typeof prev === 'string' ? prev : null;
+      });
+      st.cells = cells;
+    });
+    state.lights = newLights;
+    persist(); rebuildMarkers(); renderGrid(); renderMaterialList(); applyActiveStep(playing ? playIndex : -1);
+    return 'Auto-added ' + names.length + ' light column' + (names.length === 1 ? '' : 's') + ' from matching materials.';
+  }
+
+  function setCustomModel(root){
+    if(customModel) scene.remove(customModel);
+    customModel = root;
+    car.visible = false;
+    scene.add(customModel);
+    const box = new THREE.Box3().setFromObject(customModel);
+    const size = new THREE.Vector3(); box.getSize(size);
+    const maxDim = Math.max(size.x, size.y, size.z) || 1;
+    const scale = 4 / maxDim;
+    customModel.scale.setScalar(scale);
+    const box2 = new THREE.Box3().setFromObject(customModel);
+    const center = new THREE.Vector3(); box2.getCenter(center);
+    customModel.position.x -= center.x;
+    customModel.position.z -= center.z;
+    customModel.position.y -= box2.min.y;
+
+    customMaterials = {}; materialOriginals = {};
+    glowSources = new Map(); setHalos([]);
+    customModel.traverse(obj => {
+      if(obj.isMesh && obj.material){
+        const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+        mats.forEach(m => {
+          const name = m.name || ('Material ' + (Object.keys(customMaterials).length + 1));
+          if(!customMaterials[name]){
+            customMaterials[name] = m;
+            materialOriginals[name] = {
+              color: m.color ? m.color.clone() : new THREE.Color(0xffffff),
+              emissive: m.emissive ? m.emissive.clone() : new THREE.Color(0x000000),
+              emissiveIntensity: m.emissiveIntensity || 0
+            };
+          }
+        });
+      }
+    });
+    usingCustomModel = true;
+    computeHaloBounds();
+    applyView();
+    const msg = autoDetectLights();
+    renderMaterialList();
+    return msg;
+  }
+
+  function resetToGeneric(){
+    if(customModel){ scene.remove(customModel); customModel = null; }
+    car.visible = true;
+    usingCustomModel = false;
+    customMaterials = {}; materialOriginals = {}; haloBounds = {};
+    glowSources = new Map(); setHalos([]);
+    state.lights.forEach(l => l.position = "");
+    persist();
+    rebuildMarkers();
+    renderGrid();
+    renderMaterialList();
+    applyActiveStep(playing ? playIndex : -1);
+  }
+
+  let controls = null;
+  if(THREE.OrbitControls){
+    controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.target.set(0, 0.8, 0);
+    controls.maxPolarAngle = Math.PI * 0.495;
+  }
+
+  function resize(){
+    const w = canvas.clientWidth, h = canvas.clientHeight;
+    if(w === 0 || h === 0) return;
+    renderer.setSize(w, h, false);
+    if(bloomComposer) bloomComposer.setSize(w, h);
+    if(finalComposer) finalComposer.setSize(w, h);
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+  }
+
+  // Only meshes whose material is currently lit are drawn into the bloom pass; everything else is drawn black.
+  // The final pass adds that glow to the normal render, then compresses over-bright values while keeping the hue
+  // (plain clipping is what turned strong blues teal).
+  const darkMat = new THREE.MeshBasicMaterial({color:0x000000});
+  const glowMats = new Map();       // source material -> flat-colored stand-in used in the bloom pass
+  let glowSources = new Map();      // source material -> linear THREE.Color, set every step by update3DMarkers
+  function glowStandIn(src){
+    let g = glowMats.get(src);
+    if(!g){ g = new THREE.MeshBasicMaterial({color:0x000000}); glowMats.set(src, g); }
+    g.color.copy(glowSources.get(src)).multiplyScalar(1.6);
+    return g;
+  }
+
+  function setupBloom(){
+    const w = canvas.clientWidth || 800, h = canvas.clientHeight || 340;
+    const pr = renderer.getPixelRatio();
+    bloomComposer = new THREE.EffectComposer(renderer);
+    bloomComposer.renderToScreen = false;
+    bloomComposer.setPixelRatio(pr);
+    bloomComposer.setSize(w, h);
+    bloomComposer.addPass(new THREE.RenderPass(scene, camera));
+    bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(w, h), state.view.bloom, 0.5, 0.0);
+    // r128's bloom pass blurs into 8-bit targets, which bands the wide glow and clamps its energy — use half-float instead
+    [bloomPass.renderTargetBright, ...bloomPass.renderTargetsHorizontal, ...bloomPass.renderTargetsVertical]
+      .forEach(rt => { rt.texture.type = THREE.HalfFloatType; });
+    bloomComposer.addPass(bloomPass);
+
+    let target;
+    if(renderer.capabilities.isWebGL2 && THREE.WebGLMultisampleRenderTarget){
+      target = new THREE.WebGLMultisampleRenderTarget(w*pr, h*pr, {format:THREE.RGBAFormat, type:THREE.HalfFloatType});
+      target.samples = 4;
+    }
+    finalComposer = new THREE.EffectComposer(renderer, target);
+    finalComposer.setPixelRatio(pr);
+    finalComposer.setSize(w, h);
+    finalComposer.addPass(new THREE.RenderPass(scene, camera));
+    finalPass = new THREE.ShaderPass(new THREE.ShaderMaterial({
+      uniforms: { baseTexture:{value:null}, bloomTexture:{value:bloomComposer.renderTarget2.texture}, bloomOn:{value:0} },
+      vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
+      fragmentShader: `
+        uniform sampler2D baseTexture; uniform sampler2D bloomTexture; uniform float bloomOn; varying vec2 vUv;
+        vec3 encodeSRGB(vec3 c){ return mix(c*12.92, 1.055*pow(c, vec3(1.0/2.4)) - 0.055, step(vec3(0.0031308), c)); }
+        void main(){
+          vec3 c = texture2D(baseTexture, vUv).rgb + texture2D(bloomTexture, vUv).rgb * bloomOn;
+          float m = max(c.r, max(c.g, c.b));
+          if(m > 1.0){
+            // keep the hue; only the very hottest cores drift a little toward white
+            c = mix(c / m, vec3(1.0), smoothstep(1.0, 8.0, m) * 0.5);
+          }
+          gl_FragColor = vec4(encodeSRGB(clamp(c, 0.0, 1.0)), 1.0);
+        }`
+    }), 'baseTexture');
+    finalComposer.addPass(finalPass);
+  }
+  if(canBloom){
+    try{ setupBloom(); }
+    catch(err){
+      console.warn('Bloom setup failed, using plain rendering', err);
+      bloomComposer = finalComposer = bloomPass = finalPass = null;
+      renderer.outputEncoding = THREE.sRGBEncoding;
+    }
+  }
+  function renderBloomLayer(){
+    const saved = [], hidden = [];
+    const bg = scene.background, fog = scene.fog;
+    scene.background = null; scene.fog = null;
+    scene.traverse(o => {
+      if(o.isMesh){
+        saved.push([o, o.material]);
+        const m = o.material;
+        o.material = Array.isArray(m) ? m.map(x => glowSources.has(x) ? glowStandIn(x) : darkMat)
+                                      : (glowSources.has(m) ? glowStandIn(m) : darkMat);
+      } else if(o.isSprite && o.visible){ hidden.push(o); o.visible = false; }
+    });
+    try{ bloomComposer.render(); }
+    finally{
+      saved.forEach(([o, m]) => { o.material = m; });
+      hidden.forEach(o => { o.visible = true; });
+      scene.background = bg; scene.fog = fog;
+    }
+  }
+
+  window.addEventListener('resize', resize);
+  resize();
+  applyView();
+
+  function tick(){
+    requestAnimationFrame(tick);
+    if(!canvas.clientWidth || !canvas.clientHeight) return;   // preview tab hidden — nothing to draw
+    if(controls) controls.update();
+    updateHalos();
+    try{
+      if(finalComposer){
+        const on = glowSources.size > 0 && state.view.bloom > 0;
+        if(on) renderBloomLayer();
+        finalPass.uniforms.bloomOn.value = on ? 1 : 0;
+        finalComposer.render();
+      } else renderer.render(scene, camera);
+    }catch(err){
+      console.error('Render error — falling back to plain rendering', err);
+      bloomComposer = finalComposer = bloomPass = finalPass = null;
+      renderer.outputEncoding = THREE.sRGBEncoding;
+      setStatus('Bloom rendering hit an error and was turned off (details in the browser console).');
+    }
+  }
+  tick();
+
+  window.__viewer3d = {
+    rebuildMarkers, markers, setCustomModel, resetToGeneric, renderMaterialList, applyView, autoDetectLights, applyPaint,
+    setGlow(sources, halos){ glowSources = sources; setHalos(halos); },
+    getHaloBounds(name){ return haloBounds[name] || []; },
+    get usingCustomModel(){ return usingCustomModel; },
+    get customMaterials(){ return customMaterials; },
+    get materialOriginals(){ return materialOriginals; }
+  };
+  renderMaterialList();
+  applyActiveStep(playing ? playIndex : -1);
+
+  document.getElementById('modelImportBtn').onclick = () => document.getElementById('modelImport').click();
+  document.getElementById('resetModelBtn').onclick = () => { window.__viewer3d.resetToGeneric(); setStatus('Reverted to the generic vehicle.'); };
+  document.getElementById('modelImport').addEventListener('change', e => {
+    const file = e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      if(!THREE.GLTFLoader){ setStatus('The 3D model loader is unavailable (needs internet on first load).'); return; }
+      const gltfLoader = new THREE.GLTFLoader();
+      gltfLoader.parse(reader.result, '', gltf => {
+        const msg = window.__viewer3d.setCustomModel(gltf.scene);
+        setStatus('Model loaded. ' + msg);
+      }, () => {
+        setStatus('Could not load that model. Try exporting it as a single self-contained .glb file.');
+      });
+    };
+    reader.readAsArrayBuffer(file);
+    e.target.value = '';
+  });
+}
+
+function update3DMarkers(activeIdx){
+  const v = window.__viewer3d;
+  if(!v || typeof THREE === 'undefined') return;
+  const active = activeIdx >= 0 ? state.steps[activeIdx] : null;
+  const glow = state.view.glow;
+  const sources = new Map(), halos = [];
+  v.applyPaint();
+  if(v.usingCustomModel){
+    state.lights.forEach(l => {
+      const mat = v.customMaterials[l.position];
+      const orig = v.materialOriginals[l.position];
+      if(!mat) return;
+      const c = active ? active.cells[l.id] : null;
+      if(c){
+        const col = srgb(c);
+        if(mat.emissive){
+          mat.color.copy(col).multiplyScalar(0.35);   // let the emissive term dominate so the lens keeps its true hue
+          mat.emissive.copy(col);
+          mat.emissiveIntensity = glow;
+        } else {
+          mat.color.copy(col).multiplyScalar(glow);   // unlit materials: push the color itself into HDR range
+        }
+        sources.set(mat, col.clone());
+        v.getHaloBounds(l.position).forEach(b => halos.push({pos:b.pos, r:b.r, color:col.clone()}));
+      } else if(orig){
+        mat.color.copy(orig.color);
+        if(mat.emissive) mat.emissive.copy(orig.emissive);
+        mat.emissiveIntensity = orig.emissiveIntensity;
+      }
+    });
+    v.setGlow(sources, halos);
+    return;
+  }
+  state.lights.forEach(l => {
+    const m = v.markers[l.id];
+    if(!m) return;
+    const c = active ? active.cells[l.id] : null;
+    if(c){
+      const col = srgb(c);
+      m.mesh.material.color.copy(col).multiplyScalar(0.35);
+      m.mesh.material.emissive.copy(col);
+      m.mesh.material.emissiveIntensity = glow;
+      m.pointLight.color.copy(col);
+      m.pointLight.intensity = glow * 1.6;
+      sources.set(m.mesh.material, col.clone());
+      halos.push({pos:m.mesh.getWorldPosition(new THREE.Vector3()), r:0.11, color:col.clone()});
+    } else {
+      m.mesh.material.color.set(0x08090c);
+      m.mesh.material.emissive.set(0x000000);
+      m.mesh.material.emissiveIntensity = 0;
+      m.pointLight.intensity = 0;
+    }
+  });
+  v.setGlow(sources, halos);
+}
+
+// ---- init ----
+(function init(){
+  try{
+    const raw = localStorage.getItem('lightPatternEditor.autosave');
+    if(raw) state = JSON.parse(raw);
+  }catch(e){}
+  sanitize();
+  if(state.lights.length === 0){
+    state.lights = [newLight(), newLight()];
+    state.lights[0].position = "Front Left";
+    state.lights[1].position = "Front Right";
+    state.steps = [];
+    for(let i=0;i<4;i++) state.steps.push(newStep());
+    state.steps[0].cells[state.lights[0].id] = PRESETS[0].hex;
+    state.steps[1].cells[state.lights[1].id] = PRESETS[1].hex;
+    state.steps[2].cells[state.lights[0].id] = PRESETS[0].hex;
+    state.steps[3].cells[state.lights[1].id] = PRESETS[1].hex;
+  }
+  bpmRange.value = state.bpm; bpmNum.value = state.bpm;
+  syncSettingsUI();
+  loadPresets();
+  renderPresets();
+  try{
+    const t = localStorage.getItem('lightPatternEditor.tab');
+    if(t && document.getElementById('tab-' + t)) showTab(t);
+  }catch(e){}
+  render();
+  setTimeout(initViewer3D, 50);
+})();
+</script>
+</body>
+</html>
