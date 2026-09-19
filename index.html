@@ -49,10 +49,17 @@
 
   .palettelabel{color:var(--muted); font-size:.75rem; margin-bottom:8px;}
   .palette{display:flex; flex-wrap:wrap; gap:8px; align-items:center;}
-  .swatchbtn{width:28px; height:28px; padding:0; border-radius:6px; border:2px solid transparent; cursor:pointer;}
+  .swatchwrap{position:relative; width:28px; height:28px;}
+  .swatchbtn{width:28px; height:28px; padding:0; border-radius:6px; border:2px solid transparent; cursor:pointer; position:relative; overflow:hidden;}
   .swatchbtn.sel{border-color:var(--accent); box-shadow:0 0 0 2px rgba(56,214,255,.25);}
   .swatchbtn.off{background:var(--cell-off); position:relative;}
   .swatchbtn.off::after{content:'';position:absolute; left:3px; right:3px; top:50%; height:2px; background:var(--danger); transform:rotate(45deg);}
+  .swatchedit{
+    position:absolute; right:-4px; bottom:-4px; width:14px; height:14px; padding:0; border:1.5px solid var(--panel);
+    border-radius:50%; cursor:pointer; opacity:0; transition:opacity .12s;
+  }
+  .swatchwrap:hover .swatchedit, .swatchedit:focus{opacity:1;}
+  #resetPalette{font-size:.68rem; padding:5px 8px;}
   .customwrap{display:flex; align-items:center; gap:6px; color:var(--muted); font-size:.75rem;}
   input[type=color]{width:28px; height:28px; border:none; background:none; padding:0; cursor:pointer; border-radius:6px;}
 
@@ -153,9 +160,22 @@
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
   }
 
+  .sideresize{
+    flex:0 0 6px; width:6px; cursor:col-resize; background:transparent; position:relative;
+    border-left:1px solid var(--border);
+  }
+  .sideresize::after{
+    content:''; position:absolute; top:50%; left:1px; width:3px; height:34px;
+    transform:translateY(-50%); border-radius:2px; background:var(--border);
+  }
+  .sideresize:hover::after, .sideresize.dragging::after{background:var(--accent);}
+  body.side-collapsed .sideresize{display:none;}
+  body.side-dragging{cursor:col-resize; user-select:none;}
+  body.side-dragging .sidepane{transition:none;}
+
   .sidepane{
     flex:0 0 400px; width:400px; display:flex; flex-direction:column; min-height:0;
-    border-left:1px solid var(--border); background:var(--panel);
+    background:var(--panel);
   }
   body.side-collapsed .sidepane{display:none;}
   .tabs{display:flex; gap:2px; padding:7px 8px 0; border-bottom:1px solid var(--border); flex:0 0 auto;}
@@ -186,10 +206,56 @@
     .workspace{display:block;}
     .gridpane{padding:10px 12px;}
     .gridpane .gridwrap{max-height:60vh;}
-    .sidepane{width:auto; border-left:none; border-top:1px solid var(--border);}
+    .sideresize{display:none;}
+    .sidepane{width:auto !important; flex-basis:auto !important; border-top:1px solid var(--border);}
     .tabbody{overflow:visible;}
     .tabpanel.active#tab-preview{height:auto;}
     #tab-preview #viewer3d{height:320px;}
+  }
+
+  /* ====== tutorial modal ====== */
+  .tut-overlay{
+    position:fixed; inset:0; background:rgba(4,6,10,.62); z-index:1000;
+    display:flex; align-items:center; justify-content:center; padding:24px;
+  }
+  .tut-overlay.hidden{display:none;}
+  .tut-box{
+    background:var(--panel); border:1px solid var(--border); border-radius:12px;
+    width:100%; max-width:840px; max-height:88vh; display:flex; overflow:hidden;
+    box-shadow:0 20px 60px rgba(0,0,0,.5);
+  }
+  .tut-nav{
+    flex:0 0 200px; background:var(--panel2); border-right:1px solid var(--border);
+    overflow-y:auto; padding:10px 0;
+  }
+  .tut-nav button{
+    display:block; width:100%; text-align:left; background:none; border:none; border-radius:0;
+    color:var(--muted); padding:9px 14px; font-size:.78rem;
+  }
+  .tut-nav button .n{display:inline-block; width:18px; color:var(--muted);}
+  .tut-nav button:hover{color:var(--text); border-color:transparent;}
+  .tut-nav button.active{color:var(--accent); background:var(--panel); border-left:2px solid var(--accent); padding-left:12px;}
+  .tut-main{flex:1 1 auto; display:flex; flex-direction:column; min-width:0;}
+  .tut-head{display:flex; align-items:center; gap:10px; padding:14px 18px 10px; border-bottom:1px solid var(--border);}
+  .tut-head h2{font-size:1.02rem; margin:0; flex:1 1 auto;}
+  .tut-close{background:none; border:none; color:var(--muted); font-size:1rem; padding:4px 8px;}
+  .tut-close:hover{color:var(--danger); border-color:transparent;}
+  .tut-body{flex:1 1 auto; overflow-y:auto; padding:16px 20px; font-size:.86rem; line-height:1.55;}
+  .tut-body p{margin:0 0 10px;}
+  .tut-body ul{margin:0 0 10px; padding-left:20px;}
+  .tut-body li{margin-bottom:5px;}
+  .tut-body kbd{background:var(--panel2); border:1px solid var(--border); border-radius:4px; padding:1px 6px; font-size:.78rem;}
+  .tut-body .callout{
+    background:var(--panel2); border:1px solid var(--border); border-left:3px solid var(--accent);
+    border-radius:0 8px 8px 0; padding:9px 12px; margin:10px 0; font-size:.82rem; color:var(--text);
+  }
+  .tut-foot{display:flex; align-items:center; gap:8px; padding:12px 18px; border-top:1px solid var(--border);}
+  .tut-dots{flex:1 1 auto; display:flex; gap:5px;}
+  .tut-dots span{width:6px; height:6px; border-radius:50%; background:var(--border);}
+  .tut-dots span.on{background:var(--accent);}
+  @media (max-width:640px){
+    .tut-nav{flex-basis:130px;}
+    .tut-nav button{padding:8px 10px; font-size:.72rem;}
   }
 </style>
 </head>
@@ -212,6 +278,7 @@
   <button id="importJsonBtn">Import JSON</button>
   <input type="file" id="importJson" accept="application/json" style="display:none">
   <div class="grow"></div>
+  <button id="openTutorial" title="Open the guide">? Help</button>
   <button id="toggleSide" title="Show or hide the side panel">Hide panel ⟩</button>
 </header>
 
@@ -239,7 +306,8 @@
     <p class="statusbar" id="status">Ready. This file runs mostly offline — the 3D preview and model import need internet access to load once.</p>
   </main>
 
-  <aside class="sidepane">
+  <div class="sideresize" id="sideResize" title="Drag to resize"></div>
+  <aside class="sidepane" id="sidepane">
     <nav class="tabs" id="tabs">
       <button class="active" data-tab="preview">Preview</button>
       <button data-tab="patterns">Patterns</button>
@@ -255,10 +323,10 @@
           <div id="viewer3d-status">Loading 3D preview…</div>
         </div>
         <div class="viewctl">
-          <label>Bloom <input type="range" id="bloomRange" min="0" max="4" step="0.05" value="0"><span class="val" id="bloomVal"></span></label>
-          <label>Light glow <input type="range" id="glowRange" min="0.5" max="6" step="0.1" value="0.5"><span class="val" id="glowVal"></span></label>
-          <label>Halo / flare <input type="range" id="haloRange" min="0" max="3" step="0.05" value="0.1"><span class="val" id="haloVal"></span></label>
-          <label>Scene brightness <input type="range" id="brightRange" min="0.3" max="2.5" step="0.05" value="0.3"><span class="val" id="brightVal"></span></label>
+          <label>Bloom <input type="range" id="bloomRange" min="0" max="4" step="0.05" value="1.2"><span class="val" id="bloomVal"></span></label>
+          <label>Light glow <input type="range" id="glowRange" min="0.5" max="6" step="0.1" value="1.8"><span class="val" id="glowVal"></span></label>
+          <label>Halo / flare <input type="range" id="haloRange" min="0" max="3" step="0.05" value="1"><span class="val" id="haloVal"></span></label>
+          <label>Scene brightness <input type="range" id="brightRange" min="0.3" max="2.5" step="0.05" value="1"><span class="val" id="brightVal"></span></label>
           <button id="viewReset" class="icon">Reset view settings</button>
         </div>
       </section>
@@ -331,17 +399,37 @@
         <div id="lightMatList"></div>
         <div class="subhead">Other materials — body, glass, trim, etc. <button class="icon" id="resetPaintBtn" style="margin-left:6px;">Reset all colors</button></div>
         <div id="materialList" class="paintgrid"></div>
-        <p class="footer-note" style="margin-top:10px;">Import a single self-contained .glb file of your vehicle for best results. Any material whose name matches the prefix/suffix above is added as a light column automatically (matching is not case-sensitive); you can still change any column's material from its dropdown. Any material not assigned to a light shows up under "Other materials" so you can recolor it. Material assignments aren't saved in exported JSON, but the prefix/suffix and your color choices are, so just re-import the model when you reopen this file.</p>
+        <p class="footer-note" style="margin-top:10px;">Every non-light material renders pure black by default — including a model right after you import it — so repaint whichever panels you want from the list above. Import a single self-contained .glb file of your vehicle for best results. Any material whose name matches the prefix/suffix above is added as a light column automatically (matching is not case-sensitive); you can still change any column's material from its dropdown. Any material not assigned to a light shows up under "Other materials" so you can recolor it. Material assignments aren't saved in exported JSON, but the prefix/suffix and your color choices are, so just re-import the model when you reopen this file.</p>
       </section>
 
     </div>
   </aside>
 </div>
 
+<div class="tut-overlay hidden" id="tutOverlay">
+  <div class="tut-box">
+    <nav class="tut-nav" id="tutNav"></nav>
+    <div class="tut-main">
+      <div class="tut-head">
+        <h2 id="tutTitle"></h2>
+        <button class="tut-close" id="tutClose" title="Close guide">✕</button>
+      </div>
+      <div class="tut-body" id="tutBody"></div>
+      <div class="tut-foot">
+        <button id="tutPrev">◀ Back</button>
+        <div class="tut-dots" id="tutDots"></div>
+        <button id="tutNext" class="primary">Next ▶</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 // Pure, fully-saturated colors — every channel pushed to its limit for the hue,
 // which is what an actual RGB fixture outputs at full drive.
-const PRESETS = [
+// This is the default set; the person can recolor any swatch (see editable-palette
+// code near renderPalette), and that override is saved under PALETTE_KEY.
+const DEFAULT_PRESETS = [
   {name:"Red", hex:"#ff0000"},        // 255, 0, 0
   {name:"Blue", hex:"#0000ff"},       // 0, 0, 255
   {name:"White", hex:"#ffffff"},      // 255, 255, 255
@@ -351,10 +439,21 @@ const PRESETS = [
   {name:"Cyan", hex:"#00ffff"},       // 0, 255, 255
   {name:"Magenta", hex:"#ff00ff"}     // 255, 0, 255
 ];
+const PALETTE_KEY = 'lightPatternEditor.paletteColors';
+let PRESETS = DEFAULT_PRESETS.map(p => ({...p}));
+(function loadPaletteOverrides(){
+  try{
+    const saved = JSON.parse(localStorage.getItem(PALETTE_KEY) || 'null');
+    if(Array.isArray(saved)){
+      saved.forEach((hex, i) => { if(PRESETS[i] && typeof hex === 'string' && normHex(hex)) PRESETS[i].hex = normHex(hex); });
+    }
+  }catch(e){}
+})();
+function savePaletteOverrides(){ try{ localStorage.setItem(PALETTE_KEY, JSON.stringify(PRESETS.map(p => p.hex))); }catch(e){} }
 const POSITION_NAMES = ["Front Left","Front Right","Rear Left","Rear Right","Roof Left","Roof Right","Mirror Left","Mirror Right","Grille Left","Grille Right"];
 
-const VIEW_DEFAULTS = { v: 2, bloom: 1.2, glow: 1.8, halo: 1.0, brightness: 1.0 };
-let state = { bpm: 300, lights: [], steps: [], autoDetect: { prefix: "", suffix: "" }, materialColors: {}, view: { ...VIEW_DEFAULTS }, showCodes: false, codeFormat: "hex" };
+const VIEW_DEFAULTS = { v: 3, bloom: 0, glow: 0.5, halo: 0.15, brightness: 0.3 };
+let state = { bpm: 300, lights: [], steps: [], autoDetect: { prefix: "L_", suffix: "", v: 1 }, materialColors: {}, view: { ...VIEW_DEFAULTS }, showCodes: false, codeFormat: "hex" };
 let playing = false, playTimer = null, playIndex = 0;
 let selectedColor = PRESETS[0].hex; // current paint color; null = eraser/off
 let selectedLights = new Set();     // ids of columns ticked as a group
@@ -403,9 +502,10 @@ function sanitize(){
     Object.keys(s.cells).forEach(k => { if(typeof s.cells[k] !== 'string') s.cells[k] = null; });
   });
   if(typeof state.bpm !== 'number') state.bpm = 300;
-  if(!state.autoDetect || typeof state.autoDetect !== 'object') state.autoDetect = { prefix: "", suffix: "" };
-  if(typeof state.autoDetect.prefix !== 'string') state.autoDetect.prefix = "";
+  if(!state.autoDetect || typeof state.autoDetect !== 'object') state.autoDetect = { prefix: "L_", suffix: "", v: 1 };
+  if(typeof state.autoDetect.prefix !== 'string') state.autoDetect.prefix = "L_";
   if(typeof state.autoDetect.suffix !== 'string') state.autoDetect.suffix = "";
+  if(state.autoDetect.v !== 1){ state.autoDetect.prefix = "L_"; state.autoDetect.v = 1; }   // one-time move to the new default prefix
   if(!state.materialColors || typeof state.materialColors !== 'object') state.materialColors = {};
   state.showCodes = state.showCodes === true;
   if(state.codeFormat !== 'rgb') state.codeFormat = 'hex';
@@ -494,21 +594,70 @@ function render(){
 
 function renderPalette(){
   const wrap = document.getElementById('palette');
-  let html = PRESETS.map(p => `<button class="swatchbtn${selectedColor && selectedColor.toLowerCase()===p.hex?' sel':''}" style="background:${p.hex}" data-hex="${p.hex}" title="${p.name}"></button>`).join('');
-  html += `<button class="swatchbtn off${selectedColor===null?' sel':''}" data-hex="off" title="Off / eraser"></button>`;
+  let html = PRESETS.map((p,i) => `
+    <div class="swatchwrap">
+      <button class="swatchbtn" style="background:${p.hex}" data-hex="${p.hex}" data-i="${i}" title="${escapeAttr(p.name)} — click to paint with this color"></button>
+      <input type="color" class="swatchedit" data-i="${i}" value="${p.hex}" title="Change the ${escapeAttr(p.name)} swatch to a color of your own">
+    </div>`).join('');
+  html += `<button class="swatchbtn off" data-hex="off" title="Off / eraser"></button>`;
   html += `<div class="customwrap"><input type="color" id="customColor" value="${selectedColor ? selectedColor : '#ffffff'}"> Custom</div>`;
-  html += selectedColor ? `<span class="codelabel" title="Currently selected paint color">${escapeAttr(colorTitle(selectedColor))}</span>` : `<span class="codelabel">Eraser</span>`;
+  html += `<button id="resetPalette" class="icon" title="Restore the eight default palette colors">Reset palette</button>`;
+  html += `<span class="codelabel" id="paletteCodeLabel"></span>`;
   wrap.innerHTML = html;
-  wrap.querySelectorAll('.swatchbtn').forEach(btn => {
+
+  wrap.querySelectorAll('.swatchbtn[data-hex]').forEach(btn => {
     btn.addEventListener('click', () => {
       selectedColor = btn.dataset.hex === 'off' ? null : btn.dataset.hex;
-      renderPalette();
+      updatePaletteHighlight();
     });
   });
+
+  // Editing a swatch's own color: this native color input sits invisibly on top of the
+  // swatch button. We only react to 'change' (fired once, when the OS picker closes), never
+  // 'input' (fired continuously while dragging) — reacting to 'input' here is what used to
+  // rebuild this whole panel mid-drag and slam the picker shut.
+  wrap.querySelectorAll('.swatchedit').forEach(inp => {
+    inp.addEventListener('change', e => {
+      const i = +e.target.dataset.i;
+      const hex = normHex(e.target.value);
+      if(!hex) return;
+      const wasSelected = selectedColor && selectedColor.toLowerCase() === PRESETS[i].hex;
+      PRESETS[i].hex = hex;
+      if(wasSelected) selectedColor = hex;
+      savePaletteOverrides();
+      renderPalette();
+      buildRandomSelects();
+      setStatus('Updated the "' + PRESETS[i].name + '" swatch — it\'s saved and will paint this color from now on.');
+    });
+  });
+
+  document.getElementById('resetPalette').onclick = () => {
+    if(!confirm('Restore all eight palette swatches to their default colors? Cells already painted keep their current color.')) return;
+    PRESETS = DEFAULT_PRESETS.map(p => ({...p}));
+    try{ localStorage.removeItem(PALETTE_KEY); }catch(e){}
+    renderPalette();
+    buildRandomSelects();
+    setStatus('Palette restored to defaults.');
+  };
+
   document.getElementById('customColor').addEventListener('input', e => {
     selectedColor = e.target.value;
-    renderPalette();
+    updatePaletteHighlight();   // update labels/outlines only — never rebuild this input mid-drag
   });
+
+  updatePaletteHighlight();
+}
+
+// Updates which swatch looks "selected" and the color-code label, without touching any
+// <input type="color"> element's DOM node. Safe to call continuously while a picker is open.
+function updatePaletteHighlight(){
+  document.querySelectorAll('#palette .swatchbtn[data-hex]').forEach(btn => {
+    const isOff = btn.dataset.hex === 'off';
+    const match = isOff ? selectedColor === null : (selectedColor && selectedColor.toLowerCase() === btn.dataset.hex);
+    btn.classList.toggle('sel', !!match);
+  });
+  const label = document.getElementById('paletteCodeLabel');
+  if(label) label.textContent = selectedColor ? colorTitle(selectedColor) : 'Eraser';
 }
 
 function renderGrid(){
@@ -636,12 +785,14 @@ document.getElementById('clearAll').onclick = () => {
 };
 
 // ---- randomize (with chosen colors) ----
-// Both dropdowns are built from PRESETS so they always match the palette.
-(function buildRandomSelects(){
+// Both dropdowns are built from PRESETS so they always match the palette; called again
+// whenever a swatch is recolored or the palette is reset.
+function buildRandomSelects(){
   const opts = PRESETS.map(p => `<option value="${p.hex}">${p.name}</option>`).join('') + '<option value="custom">Custom…</option>';
   document.getElementById('randColorA').innerHTML = opts;
   document.getElementById('randColorB').innerHTML = '<option value="none">None</option>' + opts;
-})();
+}
+buildRandomSelects();
 document.getElementById('randColorA').addEventListener('change', e => {
   document.getElementById('randColorACustom').style.display = e.target.value === 'custom' ? 'inline-block' : 'none';
 });
@@ -789,6 +940,130 @@ document.getElementById('snapColors').onclick = () => {
   renderGrid(); persist();
   setStatus('Snapped ' + changed + ' cell' + (changed === 1 ? '' : 's') + ' to full-intensity palette colors.');
 };
+
+// ==========================================================================
+// Guided tutorial — a self-contained walkthrough of every feature in the
+// editor. Opens automatically the first time someone uses the file (tracked
+// in localStorage), and any time afterward via the "? Help" button.
+// ==========================================================================
+const TUTORIAL_SEEN_KEY = 'lightPatternEditor.tutorialSeen';
+const TUTORIAL = [
+  { title: 'Welcome', body: `
+    <p>This editor builds step-based light patterns for an emergency vehicle — and previews them on a 3D model in real time.</p>
+    <p>This guide is short. Use the list on the left to jump to any section, or just click <b>Next</b> through it once. You can reopen it any time with the <b>? Help</b> button in the top bar.</p>
+    <div class="callout">Everything here is on-device — patterns, presets and the model you import stay in your browser. Nothing is uploaded anywhere.</div>
+  `},
+  { title: 'The grid', body: `
+    <p>The center of the screen is the pattern grid. Each <b>column</b> is one light; each <b>row</b> is one step in the sequence.</p>
+    <ul>
+      <li>Click a cell to paint it with the currently selected color.</li>
+      <li>Click a painted cell again to clear it (or use the eraser swatch — see Colors).</li>
+      <li><b>+ Add Light</b> and <b>+ Add Step</b> in the top bar grow the grid.</li>
+      <li>Each light's header lets you set a name and, if a custom model is loaded, which material it controls.</li>
+    </ul>
+    <p>Playback runs down the rows in order, using the BPM control in the top bar, and lights up the 3D preview to match whichever step is active.</p>
+  `},
+  { title: 'Colors & painting', body: `
+    <p>The palette above the grid holds eight fully-saturated colors plus a black-slash <b>eraser</b> swatch and a free-form <b>custom</b> picker. Click a swatch to select it, then click cells to paint with it.</p>
+    <div class="callout"><b>Tip:</b> hover any swatch and a tiny dot appears in its corner — that opens a real color picker and lets you redefine that swatch permanently. It's saved, so it stays your color every time you open this file.</div>
+    <p>Made a mistake, or importing patterns built on the old muted colors? <b>Tools → Color cleanup → "Snap all colors to the palette"</b> rounds every cell in the grid to the nearest full-intensity palette color in one click.</p>
+  `},
+  { title: 'Grouping columns', body: `
+    <p>Tick the small <b>Group</b> checkbox in a light's header to select it. Grouping is used for two things:</p>
+    <ul>
+      <li><b>Clear steps in group</b> — wipes every step color from just the ticked columns, leaving their names, mount points, and every other column untouched.</li>
+      <li><b>Saving a preset pattern</b> from those columns (see the Patterns section).</li>
+    </ul>
+    <p><b>Select all</b> / <b>Clear selection</b> next to the counter tick or untick every column at once.</p>
+  `},
+  { title: 'Reordering columns', body: `
+    <p>Each light's header has ◀ ▶ arrows. Click them to slide that column left or right — its colors, name, mount point, and group tick all travel with it, nothing else in the grid changes.</p>
+    <p>The arrows grey out at the first and last column since there's nowhere further to move.</p>
+  `},
+  { title: 'Preset patterns', body: `
+    <p>Found on the <b>Patterns</b> tab in the side panel. A preset stores only the step colors of the columns you grouped — never names, mount points, or IDs — so any pattern can be dropped onto any columns, in any copy of this file.</p>
+    <ul>
+      <li>Group the columns you want, name the pattern, and click <b>Save grouped columns</b>.</li>
+      <li><b>Apply</b> puts a saved pattern back onto either the grouped columns or new columns appended at the end (choose with the "Apply to" dropdown). If the pattern has more or fewer steps than your project, steps are added or the pattern is tiled to fit.</li>
+      <li><b>Export</b> / <b>Export all</b> downloads a small JSON file you can share; <b>Import</b> reads one or more of those files back in, or even a full editor export (each of its light columns becomes one pattern column).</li>
+    </ul>
+  `},
+  { title: 'Randomize & cleanup', body: `
+    <p>The <b>Tools</b> tab has a quick randomizer: pick one or two colors and it fills every cell of every column with a random mix of those colors and "off" — handy for a starting point or a chaotic strobe effect.</p>
+    <p><b>Color cleanup</b> snaps every cell to the nearest palette color (see Colors). <b>Danger zone → Clear all lights and steps</b> wipes the whole project — there's a confirmation before it runs.</p>
+  `},
+  { title: '3D model & materials', body: `
+    <p>The <b>Model</b> tab lets you import your own vehicle as a single self-contained <b>.glb</b> file, or stick with the built-in generic vehicle.</p>
+    <ul>
+      <li>Set a material-name <b>prefix</b> and/or <b>suffix</b> (e.g. "LIGHT_") and click <b>Re-scan loaded model</b> — any matching material becomes a light column automatically, matched to the pattern grid.</li>
+      <li>Materials not matched as lights show up under <b>Other materials</b>, each with its own color picker.</li>
+    </ul>
+    <div class="callout"><b>Every non-light material renders solid black by default</b> — this includes the generic vehicle and any model right after you import it. Repaint whichever panels you want from the material list; the ↺ button resets a single one back to black, and "Reset all colors" clears every override at once.</div>
+    <p>Material color choices are saved with your project; the model file itself is not (browsers can't persist an arbitrary uploaded file), so just re-import the .glb when you reopen this file — your prefix/suffix and colors will still be there.</p>
+  `},
+  { title: 'Preview controls', body: `
+    <p>The <b>Preview</b> tab shows the live 3D vehicle — drag to rotate, scroll to zoom. Underneath, four sliders adjust how the lighting looks:</p>
+    <ul>
+      <li><b>Bloom</b> — overall glow intensity added in post-processing.</li>
+      <li><b>Light glow</b> — how strongly each lit color blooms.</li>
+      <li><b>Halo / flare</b> — the soft ring drawn around each active light.</li>
+      <li><b>Scene brightness</b> — overall exposure of the 3D scene.</li>
+    </ul>
+    <p><b>Reset view settings</b> puts all four back to their defaults. None of this affects the exported pattern data — it's purely how the preview looks.</p>
+  `},
+  { title: 'Saving & sharing', body: `
+    <p>Everything you build autosaves to your browser as you work, so refreshing the page won't lose it. For sharing or backing up a project:</p>
+    <ul>
+      <li><b>Save</b> / <b>Load</b> — a manual snapshot in browser storage, separate from the autosave.</li>
+      <li><b>Export JSON</b> / <b>Import JSON</b> — a full project file (lights, steps, colors, view settings) you can send to someone else or keep as a backup.</li>
+    </ul>
+    <p>Presets (Patterns tab) are exported and imported separately from the full project — see the Preset patterns section.</p>
+    <div class="callout">That's everything. Click <b>Hide panel</b> in the top bar any time you want the grid to take the full width. Happy patterning.</div>
+  `}
+];
+let tutIndex = 0;
+
+function tutRenderNav(){
+  document.getElementById('tutNav').innerHTML = TUTORIAL.map((t,i) =>
+    `<button data-i="${i}" class="${i===tutIndex?'active':''}"><span class="n">${i+1}.</span>${escapeAttr(t.title)}</button>`
+  ).join('');
+}
+function tutRenderDots(){
+  document.getElementById('tutDots').innerHTML = TUTORIAL.map((_,i) => `<span class="${i===tutIndex?'on':''}"></span>`).join('');
+}
+function tutShow(i){
+  tutIndex = Math.max(0, Math.min(TUTORIAL.length - 1, i));
+  document.getElementById('tutTitle').textContent = TUTORIAL[tutIndex].title;
+  document.getElementById('tutBody').innerHTML = TUTORIAL[tutIndex].body;
+  document.getElementById('tutBody').scrollTop = 0;
+  document.getElementById('tutPrev').disabled = tutIndex === 0;
+  document.getElementById('tutNext').textContent = tutIndex === TUTORIAL.length - 1 ? 'Done ✓' : 'Next ▶';
+  tutRenderNav();
+  tutRenderDots();
+}
+function openTutorial(startAt){
+  tutShow(typeof startAt === 'number' ? startAt : 0);
+  document.getElementById('tutOverlay').classList.remove('hidden');
+}
+function closeTutorial(){
+  document.getElementById('tutOverlay').classList.add('hidden');
+  try{ localStorage.setItem(TUTORIAL_SEEN_KEY, '1'); }catch(e){}
+}
+document.getElementById('openTutorial').onclick = () => openTutorial(0);
+document.getElementById('tutClose').onclick = closeTutorial;
+document.getElementById('tutOverlay').addEventListener('click', e => { if(e.target.id === 'tutOverlay') closeTutorial(); });
+document.getElementById('tutPrev').onclick = () => tutShow(tutIndex - 1);
+document.getElementById('tutNext').onclick = () => { if(tutIndex === TUTORIAL.length - 1) closeTutorial(); else tutShow(tutIndex + 1); };
+document.getElementById('tutNav').addEventListener('click', e => {
+  const i = e.target.closest('button') ? e.target.closest('button').dataset.i : null;
+  if(i !== null) tutShow(+i);
+});
+document.addEventListener('keydown', e => {
+  if(document.getElementById('tutOverlay').classList.contains('hidden')) return;
+  if(e.key === 'Escape') closeTutorial();
+  else if(e.key === 'ArrowRight') tutShow(tutIndex + 1);
+  else if(e.key === 'ArrowLeft') tutShow(tutIndex - 1);
+});
 
 function setStatus(msg){ document.getElementById('status').textContent = msg; }
 
@@ -1051,6 +1326,72 @@ document.getElementById('toggleSide').onclick = () => {
   if(!hidden) requestAnimationFrame(() => window.dispatchEvent(new Event('resize')));
 };
 
+// ---- side panel: drag to resize ----
+// Lets a wide/high-res monitor devote more room to the 3D preview, or shrink the
+// panel down to give the pattern grid more space. Width is saved so it's remembered.
+const SIDE_WIDTH_KEY = 'lightPatternEditor.sideWidth';
+const SIDE_WIDTH_MIN = 280, SIDE_WIDTH_MAX_MARGIN = 360;   // keep at least this much room for the grid
+function setSideWidth(px){
+  const max = Math.max(SIDE_WIDTH_MIN, window.innerWidth - SIDE_WIDTH_MAX_MARGIN);
+  px = Math.round(Math.min(max, Math.max(SIDE_WIDTH_MIN, px)));
+  document.getElementById('sidepane').style.flexBasis = px + 'px';
+  document.getElementById('sidepane').style.width = px + 'px';
+  return px;
+}
+(function initSideWidth(){
+  try{
+    const saved = parseInt(localStorage.getItem(SIDE_WIDTH_KEY), 10);
+    if(!isNaN(saved)) setSideWidth(saved);
+  }catch(e){}
+})();
+(function setUpSideResize(){
+  const handle = document.getElementById('sideResize');
+  let dragging = false, startX = 0, startW = 0;
+  function onMove(e){
+    if(!dragging) return;
+    const x = e.touches ? e.touches[0].clientX : e.clientX;
+    setSideWidth(startW - (x - startX));   // panel is on the right, so dragging left grows it
+  }
+  function onUp(){
+    if(!dragging) return;
+    dragging = false;
+    handle.classList.remove('dragging');
+    document.body.classList.remove('side-dragging');
+    window.removeEventListener('mousemove', onMove);
+    window.removeEventListener('mouseup', onUp);
+    window.removeEventListener('touchmove', onMove);
+    window.removeEventListener('touchend', onUp);
+    try{ localStorage.setItem(SIDE_WIDTH_KEY, document.getElementById('sidepane').getBoundingClientRect().width); }catch(e){}
+    window.dispatchEvent(new Event('resize'));   // let the 3D viewer re-measure its new size
+  }
+  function onDown(e){
+    if(document.body.classList.contains('side-collapsed')) return;
+    dragging = true; startX = e.touches ? e.touches[0].clientX : e.clientX;
+    startW = document.getElementById('sidepane').getBoundingClientRect().width;
+    handle.classList.add('dragging');
+    document.body.classList.add('side-dragging');
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    window.addEventListener('touchmove', onMove, {passive:false});
+    window.addEventListener('touchend', onUp);
+    e.preventDefault();
+  }
+  handle.addEventListener('mousedown', onDown);
+  handle.addEventListener('touchstart', onDown, {passive:false});
+  handle.addEventListener('dblclick', () => {
+    setSideWidth(400);
+    try{ localStorage.setItem(SIDE_WIDTH_KEY, '400'); }catch(e){}
+    window.dispatchEvent(new Event('resize'));
+  });
+})();
+window.addEventListener('resize', () => {
+  // keep the saved width sane if the window is later made much narrower
+  try{
+    const saved = parseInt(localStorage.getItem(SIDE_WIDTH_KEY), 10);
+    if(!isNaN(saved) && !document.body.classList.contains('side-collapsed')) setSideWidth(saved);
+  }catch(e){}
+});
+
 // ---- auto-detect fields + viewport sliders ----
 function syncSettingsUI(){
   document.getElementById('showCodes').checked = state.showCodes;
@@ -1160,10 +1501,12 @@ function initViewer3D(){
   scene.add(ground);
 
   // ---- generic vehicle ----
+  // Everything starts pure black by default (per user preference) — people repaint
+  // whichever panels they want from the Model tab.
   const genericPaint = [
-    { key:'generic:Body',   label:'Body',   mat:new THREE.MeshStandardMaterial({color:srgb(0x33405f), roughness:0.32, metalness:0.55}) },
-    { key:'generic:Cabin',  label:'Cabin',  mat:new THREE.MeshStandardMaterial({color:srgb(0x2a3350), roughness:0.25, metalness:0.4}) },
-    { key:'generic:Wheels', label:'Wheels', mat:new THREE.MeshStandardMaterial({color:srgb(0x15161a), roughness:0.85, metalness:0.1}) }
+    { key:'generic:Body',   label:'Body',   mat:new THREE.MeshStandardMaterial({color:srgb(0x000000), roughness:0.32, metalness:0.55}) },
+    { key:'generic:Cabin',  label:'Cabin',  mat:new THREE.MeshStandardMaterial({color:srgb(0x000000), roughness:0.25, metalness:0.4}) },
+    { key:'generic:Wheels', label:'Wheels', mat:new THREE.MeshStandardMaterial({color:srgb(0x000000), roughness:0.85, metalness:0.1}) }
   ];
   genericPaint.forEach(p => { p.orig = { color: p.mat.color.clone() }; });
   const [bodyMat, cabinMat, wheelMat] = genericPaint.map(p => p.mat);
@@ -1331,11 +1674,11 @@ function initViewer3D(){
     }
     el.innerHTML = items.map((p, i) => {
       const ov = state.materialColors[p.key];
-      const hex = ov || toHex(p.orig.color);
+      const hex = ov || '#000000';
       return `<div class="paintrow${ov ? ' changed' : ''}" data-i="${i}">
         <input type="color" value="${hex}" data-role="paint" data-i="${i}" title="Change color">
         <span class="pname" title="${escapeAttr(p.label)}">${escapeAttr(p.label)}</span>
-        <button class="rst" data-role="paintReset" data-i="${i}" title="Restore original color">↺</button>
+        <button class="rst" data-role="paintReset" data-i="${i}" title="Reset to black (the default)">↺</button>
       </div>`;
     }).join('');
   }
@@ -1360,12 +1703,15 @@ function initViewer3D(){
     persist();
   });
 
-  // Applies color overrides (or originals) to every material that isn't a light lens
+  // Applies color overrides to every material that isn't a light lens.
+  // Anything without an explicit override renders pure black by default — this
+  // is a deliberate default (not the color the model shipped with), so a freshly
+  // imported .glb comes in black until someone repaints a panel from the Model tab.
   function applyPaint(){
     getPaintables().forEach(p => {
       const ov = state.materialColors[p.key];
       if(ov) p.mat.color.copy(srgb(ov));
-      else if(p.orig) p.mat.color.copy(p.orig.color);
+      else p.mat.color.setRGB(0,0,0);
       if(usingCustomModel && p.mat.emissive && p.orig){
         p.mat.emissive.copy(p.orig.emissive);
         p.mat.emissiveIntensity = p.orig.emissiveIntensity;
@@ -1705,6 +2051,9 @@ function update3DMarkers(activeIdx){
   syncSettingsUI();
   loadPresets();
   renderPresets();
+  try{
+    if(!localStorage.getItem(TUTORIAL_SEEN_KEY)) openTutorial(0);
+  }catch(e){}
   try{
     const t = localStorage.getItem('lightPatternEditor.tab');
     if(t && document.getElementById('tab-' + t)) showTab(t);
