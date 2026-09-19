@@ -31,7 +31,7 @@
   .toolbar{display:flex; flex-wrap:wrap; gap:8px; align-items:center;}
   button{
     background:var(--panel2); color:var(--text); border:1px solid var(--border);
-    border-radius:6px; padding:7px 11px; font-size:.82rem; cursor:pointer;
+    border-radius:0px; padding:7px 11px; font-size:.82rem; cursor:pointer;
   }
   button:hover{border-color:var(--accent);}
   button:focus-visible{outline:2px solid var(--accent); outline-offset:1px;}
@@ -55,10 +55,27 @@
   .swatchbtn.off{background:var(--cell-off); position:relative;}
   .swatchbtn.off::after{content:'';position:absolute; left:3px; right:3px; top:50%; height:2px; background:var(--danger); transform:rotate(45deg);}
   .swatchedit{
-    position:absolute; right:-4px; bottom:-4px; width:14px; height:14px; padding:0; border:1.5px solid var(--panel);
+    position:absolute; right:-3px; bottom:-3px; width:9px; height:9px; padding:0; border:1px solid var(--panel);
     border-radius:50%; cursor:pointer; opacity:0; transition:opacity .12s;
   }
   .swatchwrap:hover .swatchedit, .swatchedit:focus{opacity:1;}
+  .colormenu{position:fixed; z-index:80; background:var(--panel); border:1px solid var(--border); border-radius:8px; padding:10px; width:210px; box-shadow:0 10px 28px rgba(0,0,0,.55);}
+  .colormenu .cmsv{position:relative; width:100%; height:120px; border-radius:5px; margin-bottom:9px; cursor:crosshair;
+    background-image:linear-gradient(to top, #000, rgba(0,0,0,0)), linear-gradient(to right, #fff, rgba(255,255,255,0));}
+  .colormenu .cmsv-cursor{position:absolute; width:10px; height:10px; margin:-5px; border-radius:50%; border:2px solid #fff; box-shadow:0 0 0 1px rgba(0,0,0,.6), 0 0 3px rgba(0,0,0,.6); pointer-events:none;}
+  .colormenu .cmhue{position:relative; width:100%; height:12px; border-radius:6px; margin-bottom:10px; cursor:pointer;
+    background:linear-gradient(to right, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00);}
+  .colormenu .cmhue-cursor{position:absolute; top:-2px; width:4px; height:16px; margin-left:-2px; border-radius:2px; background:#fff; border:1px solid rgba(0,0,0,.5); pointer-events:none;}
+  .colormenu .cmrow{display:flex; align-items:center; gap:6px; margin-bottom:4px;}
+  .colormenu .cmrow label{width:14px; color:var(--muted); font-size:.72rem; flex-shrink:0;}
+  .colormenu .cmrow input[type=text],.colormenu .cmrow input[type=number]{width:100%; background:var(--panel2); color:var(--text); border:1px solid var(--border); border-radius:4px; padding:3px 5px; font-size:.76rem; font-variant-numeric:tabular-nums;}
+  .colormenu .cmhex{margin-bottom:8px;}
+  .colormenu .cmhex input{text-transform:uppercase;}
+  .colormenu .cmfield{margin-bottom:7px;}
+  .colormenu .cmfield:last-child{margin-bottom:0;}
+  .colormenu .cmslide{width:100%; display:block; accent-color:var(--accent); margin:0;}
+  .colormenu .cmclose{position:absolute; top:5px; right:6px; background:none; border:none; color:var(--muted); cursor:pointer; font-size:.9rem; line-height:1; padding:2px 4px;}
+  .colormenu .cmclose:hover{color:var(--danger);}
   #resetPalette{font-size:.68rem; padding:5px 8px;}
   .customwrap{display:flex; align-items:center; gap:6px; color:var(--muted); font-size:.75rem;}
   input[type=color]{width:28px; height:28px; border:none; background:none; padding:0; cursor:pointer; border-radius:6px;}
@@ -66,6 +83,12 @@
   label.randlabel{display:flex; align-items:center; gap:6px; color:var(--muted); font-size:.78rem;}
 
   .viewer-wrap{position:relative;}
+  .viewer-wrap.dragover::after{
+    content:'Drop .glb / .gltf to import'; position:absolute; inset:0; z-index:5;
+    display:flex; align-items:center; justify-content:center; text-align:center; padding:0 20px;
+    background:rgba(10,12,17,.72); border:2px dashed var(--accent); border-radius:8px;
+    color:var(--accent); font-size:.9rem; font-weight:600; pointer-events:none;
+  }
   #viewer3d{width:100%; height:340px; display:block; border-radius:8px; background:#05060a;}
   #viewer3d-status{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:var(--muted); font-size:.8rem; text-align:center; padding:0 20px;}
 
@@ -91,7 +114,7 @@
   .lh .dup.src{color:var(--accent); font-weight:600;}
   .rh{display:flex; align-items:center; gap:3px; flex-wrap:nowrap; justify-content:flex-start;}
   .rh .snum{color:var(--muted); font-size:.7rem; width:16px; flex-shrink:0;}
-  .cellbtn{width:100%; height:24px; background:var(--cell-off); border:none; cursor:pointer; display:block;}
+  .cellbtn{width:100%; height:32px; background:var(--cell-off); border:none; cursor:pointer; display:block; user-select:none; -webkit-user-select:none;}
   .cellbtn{font:600 .62rem/24px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; padding:0; letter-spacing:.02em; overflow:hidden; white-space:nowrap;}
   .cellbtn:hover{filter:brightness(1.35);}
   .codeopts{display:flex; flex-wrap:wrap; align-items:center; gap:12px; margin-top:10px; color:var(--muted); font-size:.78rem;}
@@ -123,6 +146,10 @@
   .lh .mv{background:none; border:1px solid var(--border); color:var(--muted); font-size:.6rem; line-height:1; padding:2px 4px; border-radius:4px;}
   .lh .mv:hover:not(:disabled){color:var(--accent); border-color:var(--accent);}
   .lh .selbox{display:flex; align-items:center; gap:4px; color:var(--muted); font-size:.66rem; cursor:pointer;}  .lh .selbox input{accent-color:var(--accent); margin:0;}
+  .lh .idbtn{background:none; border:1px solid var(--border); color:var(--muted); font-size:.62rem; line-height:1; padding:2px 5px; border-radius:4px; cursor:pointer;}
+  .lh .idbtn:hover{color:var(--accent); border-color:var(--accent);}
+  .lh .idbtn.active{color:#fff; border-color:#fff; text-shadow:0 0 6px #fff;}
+  thead th.colhover{box-shadow:inset 0 0 0 2px var(--accent); background:rgba(56,214,255,.14);}
   thead th.selcol{background:rgba(56,214,255,.14); box-shadow:inset 0 -2px 0 var(--accent);}
   thead th.selcol .selbox{color:var(--accent);}
 
@@ -262,7 +289,7 @@
 <body>
 
 <header class="appbar">
-  <h1>Light Pattern Editor</h1>
+  <h1>Wally's Light Pattern Editor</h1>
   <button class="primary" id="playBtn">▶ Play</button>
   <label class="bpm">BPM
     <input type="range" id="bpmRange" min="30" max="1000" step="1" value="300">
@@ -317,7 +344,7 @@
     <div class="tabbody">
 
       <section class="tabpanel active" id="tab-preview">
-        <div class="palettelabel">3D vehicle preview — drag to rotate, scroll to zoom</div>
+        <div class="palettelabel">3D vehicle preview — drag to rotate, scroll to zoom, or drop a .glb/.gltf file here to import it</div>
         <div class="viewer-wrap">
           <canvas id="viewer3d"></canvas>
           <div id="viewer3d-status">Loading 3D preview…</div>
@@ -457,6 +484,11 @@ let state = { bpm: 300, lights: [], steps: [], autoDetect: { prefix: "L_", suffi
 let playing = false, playTimer = null, playIndex = 0;
 let selectedColor = PRESETS[0].hex; // current paint color; null = eraser/off
 let selectedLights = new Set();     // ids of columns ticked as a group
+let identifyLight = null;           // id of a light forced bright white in the viewport, for locating it — not part of saved state
+let hoveredLightId = null;          // id of a light currently hovered in the 3D viewport
+let isDraggingPaint = false;        // mouse button down and dragging across cells
+let dragPaintValue = null;          // color/null every cell crossed during this drag is set to
+let lastPointerPaint = null;        // {stepIdx, lightId} of the cell just painted via mousedown, so the trailing click doesn't repaint it
 let presets = [];                   // saved pattern presets: { id, name, columns: [[hex|null, ...], ...] }
 const PRESET_KEY = 'lightPatternEditor.presets';
 const PRESET_FILE_TYPE = 'light-pattern-preset';
@@ -481,6 +513,201 @@ function colorTitle(c){
 function readableOn(c){
   const rgb = hexToRgb(c); if(!rgb) return '#fff';
   return (0.2126*rgb[0] + 0.7152*rgb[1] + 0.0722*rgb[2]) / 255 > 0.55 ? '#000' : '#fff';
+}
+function clamp(v,min,max){ return Math.min(max, Math.max(min, v)); }
+function rgbToHex(r,g,b){ return '#' + [r,g,b].map(v => clamp(Math.round(v),0,255).toString(16).padStart(2,'0')).join(''); }
+function rgbToHsl(r,g,b){
+  r/=255; g/=255; b/=255;
+  const max = Math.max(r,g,b), min = Math.min(r,g,b);
+  let h, s; const l = (max+min)/2;
+  if(max === min){ h = s = 0; }
+  else{
+    const d = max - min;
+    s = l > 0.5 ? d/(2-max-min) : d/(max+min);
+    switch(max){
+      case r: h = (g-b)/d + (g<b?6:0); break;
+      case g: h = (b-r)/d + 2; break;
+      default: h = (r-g)/d + 4;
+    }
+    h /= 6;
+  }
+  return [Math.round(h*360), Math.round(s*100), Math.round(l*100)];
+}
+function hslToRgb(h,s,l){
+  h/=360; s/=100; l/=100;
+  if(s === 0){ const v = Math.round(l*255); return [v,v,v]; }
+  const q = l < 0.5 ? l*(1+s) : l+s-l*s, p = 2*l - q;
+  const hue2rgb = (p,q,t) => {
+    if(t<0) t+=1; if(t>1) t-=1;
+    if(t<1/6) return p+(q-p)*6*t;
+    if(t<1/2) return q;
+    if(t<2/3) return p+(q-p)*(2/3-t)*6;
+    return p;
+  };
+  return [Math.round(hue2rgb(p,q,h+1/3)*255), Math.round(hue2rgb(p,q,h)*255), Math.round(hue2rgb(p,q,h-1/3)*255)];
+}
+
+function hsvToRgb(h,s,v){
+  const c = v*s, x = c*(1-Math.abs((h/60)%2-1)), m = v-c;
+  let r,g,b;
+  if(h<60)[r,g,b]=[c,x,0];
+  else if(h<120)[r,g,b]=[x,c,0];
+  else if(h<180)[r,g,b]=[0,c,x];
+  else if(h<240)[r,g,b]=[0,x,c];
+  else if(h<300)[r,g,b]=[x,0,c];
+  else [r,g,b]=[c,0,x];
+  return [Math.round((r+m)*255), Math.round((g+m)*255), Math.round((b+m)*255)];
+}
+// rgbToHsv (used elsewhere in {h,s,v} object form) is defined further below; this local
+// helper matches its math but returns a plain array, which is what the color menu wants.
+function rgbToHsvArr(r,g,b){
+  r/=255; g/=255; b/=255;
+  const max = Math.max(r,g,b), min = Math.min(r,g,b), d = max-min;
+  let h = 0;
+  if(d){
+    if(max === r) h = 60 * (((g-b)/d) % 6);
+    else if(max === g) h = 60 * ((b-r)/d + 2);
+    else h = 60 * ((r-g)/d + 4);
+  }
+  return [(h+360)%360, max ? d/max : 0, max];
+}
+
+// ---- custom color menu: a saturation/value gradient square + hue strip, with hex, RGB
+// and HSL number fields (each backed by its own slider) all live at once — no native OS
+// picker, no format tabs/cycling.
+let activeColorMenu = null;
+function closeColorMenu(){
+  if(!activeColorMenu) return;
+  activeColorMenu.el.remove();
+  document.removeEventListener('mousedown', activeColorMenu.outside, true);
+  document.removeEventListener('keydown', activeColorMenu.escHandler);
+  activeColorMenu = null;
+}
+function openColorMenu(anchorEl, hex, onChange){
+  closeColorMenu();
+  const menu = document.createElement('div');
+  menu.className = 'colormenu';
+  const numField = (label, key, min, max) => `
+    <div class="cmfield">
+      <div class="cmrow"><label>${label}</label><input type="number" data-f="${key}" min="${min}" max="${max}" step="1"></div>
+      <input type="range" class="cmslide" data-fs="${key}" min="${min}" max="${max}" step="1">
+    </div>`;
+  menu.innerHTML = `
+    <button class="cmclose" title="Close">\u00d7</button>
+    <div class="cmsv" data-role="sv"><div class="cmsv-cursor"></div></div>
+    <div class="cmhue" data-role="hue"><div class="cmhue-cursor"></div></div>
+    <div class="cmrow cmhex"><label>Hex</label><input type="text" data-f="hex" spellcheck="false" maxlength="7"></div>
+    ${numField('R','r',0,255)}${numField('G','g',0,255)}${numField('B','b',0,255)}
+    ${numField('H','h',0,360)}${numField('S','s',0,100)}${numField('L','l',0,100)}`;
+  document.body.appendChild(menu);
+
+  const rect = anchorEl.getBoundingClientRect(), mw = 210, mh = menu.offsetHeight || 420;
+  let left = rect.left, top = rect.bottom + 6;
+  if(left + mw > window.innerWidth - 8) left = window.innerWidth - mw - 8;
+  if(top + mh > window.innerHeight - 8) top = Math.max(8, rect.top - mh - 6);
+  menu.style.left = Math.max(8,left) + 'px';
+  menu.style.top = Math.max(8,top) + 'px';
+
+  const f = k => menu.querySelector(`[data-f="${k}"]`);
+  const sl = k => menu.querySelector(`[data-fs="${k}"]`);
+  const svEl = menu.querySelector('[data-role="sv"]'), svCursor = svEl.querySelector('.cmsv-cursor');
+  const hueEl = menu.querySelector('[data-role="hue"]'), hueCursor = hueEl.querySelector('.cmhue-cursor');
+
+  let cur = { h:0, s:0, v:0 };   // source of truth while dragging the square/strip
+
+  function paintFromCurrentHue(){
+    svEl.style.backgroundColor = `hsl(${cur.h},100%,50%)`;
+    svCursor.style.left = (cur.s*100) + '%';
+    svCursor.style.top = ((1-cur.v)*100) + '%';
+    hueCursor.style.left = (cur.h/360*100) + '%';
+  }
+  function setFields(r,g,b){
+    const hex2 = rgbToHex(r,g,b), [hh,ss,ll] = rgbToHsl(r,g,b);
+    f('hex').value = hex2.toUpperCase();
+    f('r').value = r; f('g').value = g; f('b').value = b;
+    f('h').value = hh; f('s').value = ss; f('l').value = ll;
+    sl('r').value = r; sl('g').value = g; sl('b').value = b;
+    sl('h').value = hh; sl('s').value = ss; sl('l').value = ll;
+    return hex2;
+  }
+  // Commits an RGB value: updates every field/slider, re-derives HSV for the square and
+  // hue strip, and reports the new hex color to the caller. hueOverride lets an HSL edit
+  // keep the exact hue you typed even at an achromatic S/L (where RGB alone can't recover it).
+  function commitRgb(r,g,b, opts){
+    r = clamp(Math.round(r),0,255); g = clamp(Math.round(g),0,255); b = clamp(Math.round(b),0,255);
+    const [h,s,v] = rgbToHsvArr(r,g,b);
+    cur = { h: (opts && opts.hueOverride != null) ? opts.hueOverride : h, s, v };
+    const hex2 = setFields(r,g,b);
+    paintFromCurrentHue();
+    onChange(hex2);
+  }
+  // Commits directly from the square/hue strip's own h/s/v, so dragging never loses
+  // precision by round-tripping through RGB first.
+  function commitHsv(){
+    const [r,g,b] = hsvToRgb(cur.h, cur.s, cur.v);
+    const hex2 = setFields(r,g,b);
+    paintFromCurrentHue();
+    onChange(hex2);
+  }
+  function setFromHex(hex0){
+    const norm = normHex(hex0); if(!norm) return;
+    const [r,g,b] = hexToRgb(norm);
+    commitRgb(r,g,b);
+  }
+  setFromHex(hex);
+
+  // ---- square + hue strip dragging ----
+  function dragOn(el, onMove){
+    el.addEventListener('mousedown', e => {
+      e.preventDefault();
+      const move = ev => onMove(ev);
+      move(e);
+      const up = () => { document.removeEventListener('mousemove', move); document.removeEventListener('mouseup', up); };
+      document.addEventListener('mousemove', move);
+      document.addEventListener('mouseup', up);
+    });
+  }
+  dragOn(svEl, e => {
+    const r = svEl.getBoundingClientRect();
+    cur.s = clamp((e.clientX - r.left) / r.width, 0, 1);
+    cur.v = clamp(1 - (e.clientY - r.top) / r.height, 0, 1);
+    commitHsv();
+  });
+  dragOn(hueEl, e => {
+    const r = hueEl.getBoundingClientRect();
+    cur.h = clamp((e.clientX - r.left) / r.width, 0, 1) * 360;
+    commitHsv();
+  });
+
+  // ---- text fields + sliders ----
+  function readField(key){ return +f(key).value || 0; }
+  function handleFieldChange(field){
+    if(field === 'hex'){
+      const raw = f('hex').value.trim();
+      const norm = normHex(raw.startsWith('#') ? raw : '#' + raw);
+      if(!norm) return;
+      commitRgb(...hexToRgb(norm));
+    } else if(field === 'r' || field === 'g' || field === 'b'){
+      commitRgb(clamp(readField('r'),0,255), clamp(readField('g'),0,255), clamp(readField('b'),0,255));
+    } else {
+      const hVal = clamp(readField('h'),0,360);
+      const [r,g,b] = hslToRgb(hVal, clamp(readField('s'),0,100), clamp(readField('l'),0,100));
+      commitRgb(r,g,b, { hueOverride: hVal });
+    }
+  }
+  menu.addEventListener('input', e => {
+    const field = e.target.dataset.f || e.target.dataset.fs;
+    if(!field) return;
+    if(e.target.dataset.fs) f(field).value = e.target.value;   // keep the number box and its slider in sync
+    handleFieldChange(field);
+  });
+
+  menu.querySelector('.cmclose').onclick = closeColorMenu;
+  const outside = e => { if(!menu.contains(e.target) && e.target !== anchorEl) closeColorMenu(); };
+  const escHandler = e => { if(e.key === 'Escape') closeColorMenu(); };
+  setTimeout(() => document.addEventListener('mousedown', outside, true), 0);
+  document.addEventListener('keydown', escHandler);
+  activeColorMenu = { el: menu, outside, escHandler };
 }
 function uid(){ return Math.random().toString(36).slice(2,9); }
 function newLight(){
@@ -565,6 +792,18 @@ function moveStep(idx, dir){
   [state.steps[idx], state.steps[j]] = [state.steps[j], state.steps[idx]];
   render(); persist();
 }
+// Updates a single cell button in place (style/label/tooltip) without rebuilding the
+// whole grid — keeps drag-painting across many cells cheap.
+function updateCellDOM(stepIdx, lightId){
+  const c = state.steps[stepIdx].cells[lightId];
+  const btn = document.querySelector(`.cellbtn[data-idx="${stepIdx}"][data-light="${lightId}"]`);
+  if(!btn) return;
+  btn.setAttribute('style', c ? `background:${c};color:${readableOn(c)}` : 'background:var(--cell-off)');
+  btn.title = c ? colorTitle(c) : 'Off';
+  btn.textContent = c && state.showCodes ? colorCode(c) : '';
+}
+// Toggles a single cell: clicking a cell already holding the selected color turns it off.
+// Returns the resulting value, which a drag-paint stroke reuses for every cell it crosses.
 function paintCell(stepIdx, lightId){
   const s = state.steps[stepIdx];
   let current = s.cells[lightId];
@@ -572,9 +811,19 @@ function paintCell(stepIdx, lightId){
   if(selectedColor === null) s.cells[lightId] = null;
   else if(current && current.toLowerCase() === selectedColor.toLowerCase()) s.cells[lightId] = null;
   else s.cells[lightId] = selectedColor;
+  updateCellDOM(stepIdx, lightId);
   applyActiveStep(playing ? playIndex : -1);
-  renderGrid();
   persist();
+  return s.cells[lightId];
+}
+// Directly sets a cell to an explicit value (no toggle) — used while dragging, so every
+// cell the pointer crosses ends up matching the outcome of the cell the drag started on.
+function setCellDirect(stepIdx, lightId, value){
+  const s = state.steps[stepIdx];
+  if(s.cells[lightId] === value) return;
+  s.cells[lightId] = value;
+  updateCellDOM(stepIdx, lightId);
+  applyActiveStep(playing ? playIndex : -1);
 }
 
 function getMountOptions(){
@@ -597,10 +846,10 @@ function renderPalette(){
   let html = PRESETS.map((p,i) => `
     <div class="swatchwrap">
       <button class="swatchbtn" style="background:${p.hex}" data-hex="${p.hex}" data-i="${i}" title="${escapeAttr(p.name)} — click to paint with this color"></button>
-      <input type="color" class="swatchedit" data-i="${i}" value="${p.hex}" title="Change the ${escapeAttr(p.name)} swatch to a color of your own">
+      <button class="swatchedit" data-i="${i}" style="background:${p.hex}" title="Change the ${escapeAttr(p.name)} swatch — hex, RGB or HSL"></button>
     </div>`).join('');
   html += `<button class="swatchbtn off" data-hex="off" title="Off / eraser"></button>`;
-  html += `<div class="customwrap"><input type="color" id="customColor" value="${selectedColor ? selectedColor : '#ffffff'}"> Custom</div>`;
+  html += `<div class="customwrap"><button class="swatchbtn" id="customColorBtn" style="background:${selectedColor ? selectedColor : '#ffffff'}" title="Pick a custom paint color — hex, RGB or HSL"></button> Custom</div>`;
   html += `<button id="resetPalette" class="icon" title="Restore the eight default palette colors">Reset palette</button>`;
   html += `<span class="codelabel" id="paletteCodeLabel"></span>`;
   wrap.innerHTML = html;
@@ -612,22 +861,23 @@ function renderPalette(){
     });
   });
 
-  // Editing a swatch's own color: this native color input sits invisibly on top of the
-  // swatch button. We only react to 'change' (fired once, when the OS picker closes), never
-  // 'input' (fired continuously while dragging) — reacting to 'input' here is what used to
-  // rebuild this whole panel mid-drag and slam the picker shut.
-  wrap.querySelectorAll('.swatchedit').forEach(inp => {
-    inp.addEventListener('change', e => {
-      const i = +e.target.dataset.i;
-      const hex = normHex(e.target.value);
-      if(!hex) return;
-      const wasSelected = selectedColor && selectedColor.toLowerCase() === PRESETS[i].hex;
-      PRESETS[i].hex = hex;
-      if(wasSelected) selectedColor = hex;
-      savePaletteOverrides();
-      renderPalette();
-      buildRandomSelects();
-      setStatus('Updated the "' + PRESETS[i].name + '" swatch — it\'s saved and will paint this color from now on.');
+  // Editing a swatch's own color opens a small menu with hex, RGB and HSL fields all
+  // visible at once (no native OS picker, no format-cycling) — updates live as you type.
+  wrap.querySelectorAll('.swatchedit').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const i = +btn.dataset.i;
+      openColorMenu(btn, PRESETS[i].hex, newHex => {
+        const wasSelected = selectedColor && selectedColor.toLowerCase() === PRESETS[i].hex;
+        PRESETS[i].hex = newHex;
+        if(wasSelected){ selectedColor = newHex; updatePaletteHighlight(); }
+        btn.style.background = newHex;
+        const swBtn = btn.closest('.swatchwrap').querySelector('.swatchbtn');
+        if(swBtn){ swBtn.style.background = newHex; swBtn.dataset.hex = newHex; }
+        savePaletteOverrides();
+        buildRandomSelects();
+        setStatus('Updated the "' + PRESETS[i].name + '" swatch — it\'s saved and will paint this color from now on.');
+      });
     });
   });
 
@@ -640,9 +890,14 @@ function renderPalette(){
     setStatus('Palette restored to defaults.');
   };
 
-  document.getElementById('customColor').addEventListener('input', e => {
-    selectedColor = e.target.value;
-    updatePaletteHighlight();   // update labels/outlines only — never rebuild this input mid-drag
+  document.getElementById('customColorBtn').addEventListener('click', e => {
+    e.stopPropagation();
+    const btn = e.currentTarget;
+    openColorMenu(btn, selectedColor || '#ffffff', newHex => {
+      selectedColor = newHex;
+      btn.style.background = newHex;
+      updatePaletteHighlight();
+    });
   });
 
   updatePaletteHighlight();
@@ -678,7 +933,8 @@ function renderGrid(){
           <button class="mv" data-role="moveRight" data-id="${l.id}" title="Move this column right"${i === state.lights.length-1 ? ' disabled' : ''}>▶</button>
         </div>
         <label class="selbox" title="Include this column when saving a preset pattern"><input type="checkbox" data-role="selLight" data-id="${l.id}"${selectedLights.has(l.id) ? ' checked' : ''}> Group</label>
-        <select data-role="position" data-id="${l.id}">
+        <button class="idbtn${identifyLight === l.id ? ' active' : ''}" data-role="identify" data-id="${l.id}" title="Flash this light bright white in the viewport, to help identify which one it is">◎ Identify</button>
+        <select data-role="position" data-id="${l.id}" title="${escapeAttr(l.position || 'Unassigned')}">
           <option value="">Unassigned</option>
           ${mountOptions.map(p => `<option value="${escapeAttr(p)}"${l.position===p?' selected':''}>${escapeAttr(p)}</option>`).join('')}
         </select>
@@ -738,7 +994,15 @@ function escapeAttr(s){ return String(s).replace(/"/g,'&quot;'); }
 document.getElementById('grid').addEventListener('click', e => {
   const t = e.target;
   const role = t.dataset.role;
-  if(role === 'cell') paintCell(+t.dataset.idx, t.dataset.light);
+  if(role === 'cell'){
+    // Mouse clicks are already painted on mousedown (see the drag-paint listeners below);
+    // this only needs to fire for keyboard activation (Enter/Space on a focused cell).
+    if(lastPointerPaint && lastPointerPaint.stepIdx === +t.dataset.idx && lastPointerPaint.lightId === t.dataset.light){
+      lastPointerPaint = null;
+    } else {
+      paintCell(+t.dataset.idx, t.dataset.light);
+    }
+  }
   else if(role === 'removeLight') removeLight(t.dataset.id);
   else if(role === 'moveLeft') moveLight(t.dataset.id, -1);
   else if(role === 'moveRight') moveLight(t.dataset.id, 1);
@@ -748,6 +1012,49 @@ document.getElementById('grid').addEventListener('click', e => {
   else if(role === 'down') moveStep(+t.dataset.idx, 1);
   else if(role === 'dup') duplicateStep(+t.dataset.idx);
   else if(role === 'delStep') removeStep(+t.dataset.idx);
+  else if(role === 'identify'){
+    identifyLight = identifyLight === t.dataset.id ? null : t.dataset.id;
+    renderGrid();
+    applyActiveStep(playing ? playIndex : -1);
+  }
+});
+
+// Highlights the header of a light's column — used when the mouse hovers that light's
+// mesh in the 3D viewport, so it's obvious which column controls which physical light.
+function highlightLightColumn(id){
+  if(id === hoveredLightId) return;
+  if(hoveredLightId){
+    const prevDot = document.querySelector(`[data-role="indicator"][data-id="${hoveredLightId}"]`);
+    if(prevDot) prevDot.closest('th').classList.remove('colhover');
+  }
+  hoveredLightId = id;
+  if(id){
+    const dot = document.querySelector(`[data-role="indicator"][data-id="${id}"]`);
+    if(dot) dot.closest('th').classList.add('colhover');
+  }
+}
+// Click-and-drag painting: pressing on a cell paints it as usual, then dragging the
+// mouse while still down paints every other cell it crosses to that same result —
+// handy for filling a run of steps (or clearing one) in a single stroke.
+document.getElementById('grid').addEventListener('mousedown', e => {
+  const t = e.target.closest('[data-role="cell"]');
+  if(!t) return;
+  const stepIdx = +t.dataset.idx, lightId = t.dataset.light;
+  const result = paintCell(stepIdx, lightId);
+  isDraggingPaint = true;
+  dragPaintValue = result;
+  lastPointerPaint = { stepIdx, lightId };
+});
+document.getElementById('grid').addEventListener('mouseover', e => {
+  if(!isDraggingPaint) return;
+  const t = e.target.closest('[data-role="cell"]');
+  if(!t) return;
+  setCellDirect(+t.dataset.idx, t.dataset.light, dragPaintValue);
+});
+document.addEventListener('mouseup', () => {
+  if(!isDraggingPaint) return;
+  isDraggingPaint = false;
+  persist();
 });
 document.getElementById('grid').addEventListener('input', e => {
   const t = e.target;
@@ -767,7 +1074,7 @@ document.getElementById('grid').addEventListener('change', e => {
   if(t.dataset.role === 'position'){
     const l = state.lights.find(x => x.id === t.dataset.id);
     if(l){
-      l.position = t.value; persist();
+      l.position = t.value; t.title = t.value || 'Unassigned'; persist();
       if(window.__viewer3d){ window.__viewer3d.rebuildMarkers(); window.__viewer3d.renderMaterialList(); }
       applyActiveStep(playing ? playIndex : -1);
     }
@@ -1540,23 +1847,41 @@ function initViewer3D(){
   let customModel = null;
   let customMaterials = {};
   let materialOriginals = {};
+  let meshesByMaterial = {};   // material name -> actual meshes using it (custom model only), for hover-raycasting
+
+  // Which meshes should highlight their light's grid column when the mouse hovers them.
+  let hoverTargets = [];   // [{mesh, lightId}]
+  function rebuildHoverTargets(){
+    hoverTargets = [];
+    state.lights.forEach(l => {
+      if(!l.position) return;
+      if(usingCustomModel){
+        (meshesByMaterial[l.position] || []).forEach(mesh => hoverTargets.push({mesh, lightId:l.id}));
+      } else {
+        const mk = markers[l.id];
+        if(mk) hoverTargets.push({mesh:mk.mesh, lightId:l.id});
+      }
+    });
+  }
 
   function rebuildMarkers(){
     Object.values(markers).forEach(m => { car.remove(m.mesh); car.remove(m.pointLight); });
     for(const k in markers) delete markers[k];
-    if(usingCustomModel) return;
-    state.lights.forEach(l => {
-      const pos = POSITIONS[l.position];
-      if(!pos) return;
-      const mat = new THREE.MeshStandardMaterial({color:0x08090c, roughness:0.5, emissive:0x000000, emissiveIntensity:0});
-      const mesh = new THREE.Mesh(markerGeo, mat);
-      mesh.position.set(pos[0], pos[1], pos[2]);
-      car.add(mesh);
-      const pl = new THREE.PointLight(0xffffff, 0, 4.5);
-      pl.position.set(pos[0], pos[1], pos[2]);
-      car.add(pl);
-      markers[l.id] = { mesh, pointLight: pl };
-    });
+    if(!usingCustomModel){
+      state.lights.forEach(l => {
+        const pos = POSITIONS[l.position];
+        if(!pos) return;
+        const mat = new THREE.MeshStandardMaterial({color:0x08090c, roughness:0.5, emissive:0x000000, emissiveIntensity:0});
+        const mesh = new THREE.Mesh(markerGeo, mat);
+        mesh.position.set(pos[0], pos[1], pos[2]);
+        car.add(mesh);
+        const pl = new THREE.PointLight(0xffffff, 0, 4.5);
+        pl.position.set(pos[0], pos[1], pos[2]);
+        car.add(pl);
+        markers[l.id] = { mesh, pointLight: pl };
+      });
+    }
+    rebuildHoverTargets();
   }
   rebuildMarkers();
 
@@ -1776,7 +2101,7 @@ function initViewer3D(){
     customModel.position.z -= center.z;
     customModel.position.y -= box2.min.y;
 
-    customMaterials = {}; materialOriginals = {};
+    customMaterials = {}; materialOriginals = {}; meshesByMaterial = {};
     glowSources = new Map(); setHalos([]);
     customModel.traverse(obj => {
       if(obj.isMesh && obj.material){
@@ -1791,6 +2116,7 @@ function initViewer3D(){
               emissiveIntensity: m.emissiveIntensity || 0
             };
           }
+          (meshesByMaterial[name] = meshesByMaterial[name] || []).push(obj);
         });
       }
     });
@@ -1806,7 +2132,7 @@ function initViewer3D(){
     if(customModel){ scene.remove(customModel); customModel = null; }
     car.visible = true;
     usingCustomModel = false;
-    customMaterials = {}; materialOriginals = {}; haloBounds = {};
+    customMaterials = {}; materialOriginals = {}; haloBounds = {}; meshesByMaterial = {};
     glowSources = new Map(); setHalos([]);
     state.lights.forEach(l => l.position = "");
     persist();
@@ -1920,6 +2246,25 @@ function initViewer3D(){
   resize();
   applyView();
 
+  // ---- hover a light in the viewport -> highlight its grid column ----
+  const hoverRaycaster = new THREE.Raycaster();
+  const hoverNDC = new THREE.Vector2();
+  canvas.addEventListener('mousemove', e => {
+    if(!hoverTargets.length){ canvas.style.cursor = ''; return; }
+    const rect = canvas.getBoundingClientRect();
+    hoverNDC.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+    hoverNDC.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+    hoverRaycaster.setFromCamera(hoverNDC, camera);
+    const hits = hoverRaycaster.intersectObjects(hoverTargets.map(t => t.mesh), false);
+    const hit = hits.length ? hoverTargets.find(t => t.mesh === hits[0].object) : null;
+    canvas.style.cursor = hit ? 'pointer' : '';
+    if(window.highlightLightColumn) window.highlightLightColumn(hit ? hit.lightId : null);
+  });
+  canvas.addEventListener('mouseleave', () => {
+    canvas.style.cursor = '';
+    if(window.highlightLightColumn) window.highlightLightColumn(null);
+  });
+
   function tick(){
     requestAnimationFrame(tick);
     if(!canvas.clientWidth || !canvas.clientHeight) return;   // preview tab hidden — nothing to draw
@@ -1952,11 +2297,13 @@ function initViewer3D(){
   renderMaterialList();
   applyActiveStep(playing ? playIndex : -1);
 
-  document.getElementById('modelImportBtn').onclick = () => document.getElementById('modelImport').click();
-  document.getElementById('resetModelBtn').onclick = () => { window.__viewer3d.resetToGeneric(); setStatus('Reverted to the generic vehicle.'); };
-  document.getElementById('modelImport').addEventListener('change', e => {
-    const file = e.target.files[0];
+  // Shared by the file-picker input and drag-and-drop onto the viewport.
+  function loadModelFile(file){
     if(!file) return;
+    if(!/\.(glb|gltf)$/i.test(file.name)){
+      setStatus('That file isn\u2019t a .glb or .gltf model.');
+      return;
+    }
     const reader = new FileReader();
     reader.onload = () => {
       if(!THREE.GLTFLoader){ setStatus('The 3D model loader is unavailable (needs internet on first load).'); return; }
@@ -1969,7 +2316,36 @@ function initViewer3D(){
       });
     };
     reader.readAsArrayBuffer(file);
+  }
+  window.__viewer3d.loadModelFile = loadModelFile;
+
+  document.getElementById('modelImportBtn').onclick = () => document.getElementById('modelImport').click();
+  document.getElementById('resetModelBtn').onclick = () => { window.__viewer3d.resetToGeneric(); setStatus('Reverted to the generic vehicle.'); };
+  document.getElementById('modelImport').addEventListener('change', e => {
+    loadModelFile(e.target.files[0]);
     e.target.value = '';
+  });
+
+  // Drag a .glb/.gltf straight onto the 3D viewport to import it.
+  const viewerWrap = document.querySelector('.viewer-wrap');
+  let dragDepth = 0;
+  viewerWrap.addEventListener('dragover', e => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; });
+  viewerWrap.addEventListener('dragenter', e => {
+    e.preventDefault();
+    dragDepth++;
+    viewerWrap.classList.add('dragover');
+  });
+  viewerWrap.addEventListener('dragleave', e => {
+    e.preventDefault();
+    dragDepth = Math.max(0, dragDepth - 1);
+    if(dragDepth === 0) viewerWrap.classList.remove('dragover');
+  });
+  viewerWrap.addEventListener('drop', e => {
+    e.preventDefault();
+    dragDepth = 0;
+    viewerWrap.classList.remove('dragover');
+    const file = e.dataTransfer.files && e.dataTransfer.files[0];
+    loadModelFile(file);
   });
 }
 
@@ -1985,15 +2361,17 @@ function update3DMarkers(activeIdx){
       const mat = v.customMaterials[l.position];
       const orig = v.materialOriginals[l.position];
       if(!mat) return;
-      const c = active ? active.cells[l.id] : null;
+      const identifying = identifyLight === l.id;
+      const c = identifying ? '#ffffff' : (active ? active.cells[l.id] : null);
       if(c){
+        const g = identifying ? Math.max(glow, 2.2) : glow;
         const col = srgb(c);
         if(mat.emissive){
           mat.color.copy(col).multiplyScalar(0.35);   // let the emissive term dominate so the lens keeps its true hue
           mat.emissive.copy(col);
-          mat.emissiveIntensity = glow;
+          mat.emissiveIntensity = g;
         } else {
-          mat.color.copy(col).multiplyScalar(glow);   // unlit materials: push the color itself into HDR range
+          mat.color.copy(col).multiplyScalar(g);   // unlit materials: push the color itself into HDR range
         }
         sources.set(mat, col.clone());
         v.getHaloBounds(l.position).forEach(b => halos.push({pos:b.pos, r:b.r, color:col.clone()}));
@@ -2009,14 +2387,16 @@ function update3DMarkers(activeIdx){
   state.lights.forEach(l => {
     const m = v.markers[l.id];
     if(!m) return;
-    const c = active ? active.cells[l.id] : null;
+    const identifying = identifyLight === l.id;
+    const c = identifying ? '#ffffff' : (active ? active.cells[l.id] : null);
     if(c){
+      const g = identifying ? Math.max(glow, 2.2) : glow;
       const col = srgb(c);
       m.mesh.material.color.copy(col).multiplyScalar(0.35);
       m.mesh.material.emissive.copy(col);
-      m.mesh.material.emissiveIntensity = glow;
+      m.mesh.material.emissiveIntensity = g;
       m.pointLight.color.copy(col);
-      m.pointLight.intensity = glow * 1.6;
+      m.pointLight.intensity = g * 1.6;
       sources.set(m.mesh.material, col.clone());
       halos.push({pos:m.mesh.getWorldPosition(new THREE.Vector3()), r:0.11, color:col.clone()});
     } else {
