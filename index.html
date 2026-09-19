@@ -1265,14 +1265,15 @@ const TUTORIAL = [
     <ul>
       <li>Click a cell to paint it with the currently selected color.</li>
       <li>Click a painted cell again to clear it (or use the eraser swatch — see Colors).</li>
+      <li><b>Click and drag</b> across cells to paint (or clear) a whole run at once — the outcome of the first cell you press carries to every cell the drag crosses.</li>
       <li><b>+ Add Light</b> and <b>+ Add Step</b> in the top bar grow the grid.</li>
-      <li>Each light's header lets you set a name and, if a custom model is loaded, which material it controls.</li>
+      <li>Each light's header lets you set a name and, if a custom model is loaded, which material it controls. Hover a truncated material name to see the full name as a tooltip.</li>
     </ul>
     <p>Playback runs down the rows in order, using the BPM control in the top bar, and lights up the 3D preview to match whichever step is active.</p>
   `},
   { title: 'Colors & painting', body: `
-    <p>The palette above the grid holds eight fully-saturated colors plus a black-slash <b>eraser</b> swatch and a free-form <b>custom</b> picker. Click a swatch to select it, then click cells to paint with it.</p>
-    <div class="callout"><b>Tip:</b> hover any swatch and a tiny dot appears in its corner — that opens a real color picker and lets you redefine that swatch permanently. It's saved, so it stays your color every time you open this file.</div>
+    <p>The palette above the grid holds eight fully-saturated colors plus a black-slash <b>eraser</b> swatch and a free-form <b>custom</b> picker. Click a swatch to select it, then click (or click-and-drag) cells to paint with it.</p>
+    <div class="callout"><b>Tip:</b> hover any swatch and a tiny dot appears in its corner — click it to open a color menu with a drag-to-pick gradient square, a hue strip, and Hex / RGB / HSL fields (each with its own slider) all live at once. It's saved, so it stays your color every time you open this file. The <b>Custom</b> swatch opens the same menu without changing the palette.</div>
     <p>Made a mistake, or importing patterns built on the old muted colors? <b>Tools → Color cleanup → "Snap all colors to the palette"</b> rounds every cell in the grid to the nearest full-intensity palette color in one click.</p>
   `},
   { title: 'Grouping columns', body: `
@@ -1283,9 +1284,14 @@ const TUTORIAL = [
     </ul>
     <p><b>Select all</b> / <b>Clear selection</b> next to the counter tick or untick every column at once.</p>
   `},
-  { title: 'Reordering columns', body: `
-    <p>Each light's header has ◀ ▶ arrows. Click them to slide that column left or right — its colors, name, mount point, and group tick all travel with it, nothing else in the grid changes.</p>
-    <p>The arrows grey out at the first and last column since there's nowhere further to move.</p>
+  { title: 'Column header tools', body: `
+    <p>Each light's header packs a few tools alongside its name and mount point:</p>
+    <ul>
+      <li>◀ ▶ arrows slide that column left or right — its colors, name, mount point, and group tick all travel with it, nothing else in the grid changes. They grey out at the first and last column since there's nowhere further to move.</li>
+      <li><b>◎ Identify</b> forces that light to bright white in the 3D preview, regardless of the current step — handy for figuring out which physical light a column actually controls. Click it again (or click another light's Identify button) to release it.</li>
+      <li>You can also just <b>hover a light in the 3D preview</b> — its column header highlights automatically, no clicking needed.</li>
+      <li><b>Copy</b> / <b>Paste</b> moves just a column's step colors onto another column, leaving headers untouched.</li>
+    </ul>
   `},
   { title: 'Preset patterns', body: `
     <p>Found on the <b>Patterns</b> tab in the side panel. A preset stores only the step colors of the columns you grouped — never names, mount points, or IDs — so any pattern can be dropped onto any columns, in any copy of this file.</p>
@@ -1302,6 +1308,7 @@ const TUTORIAL = [
   { title: '3D model & materials', body: `
     <p>The <b>Model</b> tab lets you import your own vehicle as a single self-contained <b>.glb</b> file, or stick with the built-in generic vehicle.</p>
     <ul>
+      <li>Click <b>Import 3D Model</b>, or switch to the <b>Preview</b> tab and <b>drag a .glb/.gltf file straight onto the 3D viewport</b> — either way drops it right in.</li>
       <li>Set a material-name <b>prefix</b> and/or <b>suffix</b> (e.g. "LIGHT_") and click <b>Re-scan loaded model</b> — any matching material becomes a light column automatically, matched to the pattern grid.</li>
       <li>Materials not matched as lights show up under <b>Other materials</b>, each with its own color picker.</li>
     </ul>
@@ -1309,7 +1316,7 @@ const TUTORIAL = [
     <p>Material color choices are saved with your project; the model file itself is not (browsers can't persist an arbitrary uploaded file), so just re-import the .glb when you reopen this file — your prefix/suffix and colors will still be there.</p>
   `},
   { title: 'Preview controls', body: `
-    <p>The <b>Preview</b> tab shows the live 3D vehicle — drag to rotate, scroll to zoom. Underneath, four sliders adjust how the lighting looks:</p>
+    <p>The <b>Preview</b> tab shows the live 3D vehicle — drag to rotate, scroll to zoom, or drop a <b>.glb/.gltf</b> file onto it to import a model. Hover any lit-up light in the scene and its column highlights in the grid, so you always know which one you're looking at. Underneath, four sliders adjust how the lighting looks:</p>
     <ul>
       <li><b>Bloom</b> — overall glow intensity added in post-processing.</li>
       <li><b>Light glow</b> — how strongly each lit color blooms.</li>
@@ -1808,28 +1815,64 @@ function initViewer3D(){
   scene.add(ground);
 
   // ---- generic vehicle ----
-  // Everything starts pure black by default (per user preference) — people repaint
-  // whichever panels they want from the Model tab.
+  // A simple stylized cruiser/SUV silhouette — enough detail (hood/cabin split, sloped
+  // windshield, roof light bar, front/rear trim) to read as a vehicle at a glance, while
+  // staying cheap to render. Everything starts pure black by default (per user preference)
+  // — people repaint whichever panels they want from the Model tab.
   const genericPaint = [
     { key:'generic:Body',   label:'Body',   mat:new THREE.MeshStandardMaterial({color:srgb(0x000000), roughness:0.32, metalness:0.55}) },
     { key:'generic:Cabin',  label:'Cabin',  mat:new THREE.MeshStandardMaterial({color:srgb(0x000000), roughness:0.25, metalness:0.4}) },
+    { key:'generic:Trim',   label:'Trim',   mat:new THREE.MeshStandardMaterial({color:srgb(0x0a0a0c), roughness:0.5,  metalness:0.3}) },
+    { key:'generic:Glass',  label:'Glass',  mat:new THREE.MeshStandardMaterial({color:srgb(0x0d1016), roughness:0.05, metalness:0.2}) },
     { key:'generic:Wheels', label:'Wheels', mat:new THREE.MeshStandardMaterial({color:srgb(0x000000), roughness:0.85, metalness:0.1}) }
   ];
   genericPaint.forEach(p => { p.orig = { color: p.mat.color.clone() }; });
-  const [bodyMat, cabinMat, wheelMat] = genericPaint.map(p => p.mat);
+  const [bodyMat, cabinMat, trimMat, glassMat, wheelMat] = genericPaint.map(p => p.mat);
 
   const car = new THREE.Group();
+
+  // Lower body: slightly lower at the very front/rear (bumpers) than the mid-section, so
+  // the silhouette isn't a single flat slab.
   const body = new THREE.Mesh(new THREE.BoxGeometry(4,0.9,1.8), bodyMat);
   body.position.y = 0.65;
   car.add(body);
+  const frontBumper = new THREE.Mesh(new THREE.BoxGeometry(0.14,0.36,1.72), trimMat);
+  frontBumper.position.set(2.0,0.45,0);
+  car.add(frontBumper);
+  const rearBumper = new THREE.Mesh(new THREE.BoxGeometry(0.14,0.36,1.72), trimMat);
+  rearBumper.position.set(-2.0,0.45,0);
+  car.add(rearBumper);
+
+  // Cabin sits mid-vehicle, set back slightly to leave a hood up front.
   const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.9,0.7,1.6), cabinMat);
   cabin.position.set(-0.1,1.45,0);
   car.add(cabin);
-  const wheelGeo = new THREE.CylinderGeometry(0.38,0.38,0.3,16);
+
+  // Sloped windshield bridging the hood and the cabin roofline — this single angled panel
+  // is what stops the whole thing reading as a stacked pair of boxes.
+  const windshield = new THREE.Mesh(new THREE.BoxGeometry(0.06,0.95,1.5), glassMat);
+  windshield.position.set(0.83,1.42,0);
+  windshield.rotation.z = -0.42;
+  car.add(windshield);
+  const rearGlass = new THREE.Mesh(new THREE.BoxGeometry(0.06,0.7,1.5), glassMat);
+  rearGlass.position.set(-0.98,1.42,0);
+  rearGlass.rotation.z = 0.32;
+  car.add(rearGlass);
+
+  // Roof light bar — a nod to what this whole tool is for.
+  const lightBar = new THREE.Mesh(new THREE.BoxGeometry(0.55,0.13,1.35), trimMat);
+  lightBar.position.set(-0.1,1.855,0);
+  car.add(lightBar);
+
+  // Wheels: cylinders roll around their own local Y axis, so to make them stand upright
+  // with their flat faces pointing left/right (+/-Z) — not front/back — they're rotated
+  // 90° about X, not Z. (Rotating about Z instead is the classic mistake that leaves the
+  // wheel faces pointing down the length of the car, i.e. facing the wrong way entirely.)
+  const wheelGeo = new THREE.CylinderGeometry(0.4,0.4,0.28,24);
   [[1.3,-0.9],[1.3,0.9],[-1.3,-0.9],[-1.3,0.9]].forEach(([x,z]) => {
     const w = new THREE.Mesh(wheelGeo, wheelMat);
-    w.rotation.z = Math.PI/2;
-    w.position.set(x,0.38,z);
+    w.rotation.x = Math.PI/2;
+    w.position.set(x,0.4,z);
     car.add(w);
   });
   scene.add(car);
