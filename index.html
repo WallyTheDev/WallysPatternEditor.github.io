@@ -488,7 +488,7 @@ function savePaletteOverrides(){ try{ localStorage.setItem(PALETTE_KEY, JSON.str
 const POSITION_NAMES = ["Front Left","Front Right","Rear Left","Rear Right","Roof Left","Roof Right","Mirror Left","Mirror Right","Grille Left","Grille Right"];
 
 const VIEW_DEFAULTS = { v: 3, bloom: 0, glow: 0.5, halo: 0.15, brightness: 0.3 };
-let state = { bpm: 300, lights: [], steps: [], autoDetect: { prefix: "L_", suffix: "", v: 1 }, materialColors: {}, view: { ...VIEW_DEFAULTS }, showCodes: false, codeFormat: "hex" };
+let state = { bpm: 300, lights: [], steps: [], autoDetect: { prefix: "EL_", suffix: "", v: 1 }, materialColors: {}, view: { ...VIEW_DEFAULTS }, showCodes: false, codeFormat: "hex" };
 let playing = false, playTimer = null, playIndex = 0;
 let selectedColor = PRESETS[0].hex; // current paint color; null = eraser/off
 let selectedLights = new Set();     // ids of columns ticked as a group
@@ -743,10 +743,10 @@ function sanitize(){
     });
   });
   if(typeof state.bpm !== 'number') state.bpm = 300;
-  if(!state.autoDetect || typeof state.autoDetect !== 'object') state.autoDetect = { prefix: "L_", suffix: "", v: 1 };
-  if(typeof state.autoDetect.prefix !== 'string') state.autoDetect.prefix = "L_";
+  if(!state.autoDetect || typeof state.autoDetect !== 'object') state.autoDetect = { prefix: "EL_", suffix: "", v: 1 };
+  if(typeof state.autoDetect.prefix !== 'string') state.autoDetect.prefix = "EL_";
   if(typeof state.autoDetect.suffix !== 'string') state.autoDetect.suffix = "";
-  if(state.autoDetect.v !== 1){ state.autoDetect.prefix = "L_"; state.autoDetect.v = 1; }   // one-time move to the new default prefix
+  if(state.autoDetect.v !== 1){ state.autoDetect.prefix = "EL_"; state.autoDetect.v = 1; }   // one-time move to the new default prefix
   if(!state.materialColors || typeof state.materialColors !== 'object') state.materialColors = {};
   state.showCodes = state.showCodes === true;
   if(state.codeFormat !== 'rgb') state.codeFormat = 'hex';
