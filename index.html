@@ -387,7 +387,7 @@
           <button id="exportAllPresets">Export all</button>
         </div>
         <div class="presetlist" id="presetList"></div>
-        <p class="footer-note">Saved patterns hold nothing but the step colors, column by column. No light names, mount points, or IDs travel with them, so a pattern can be applied to any set of columns in any file.</p>
+        <p class="footer-note">Saved patterns hold nothing but the step colors and their per-cell intensity, column by column. No light names, mount points, or IDs travel with them, so a pattern can be applied to any set of columns in any file.</p>
       </section>
 
       <section class="tabpanel" id="tab-tools">
@@ -1360,7 +1360,7 @@ const TUTORIAL = [
     </ul>
   `},
   { title: 'Preset patterns', body: `
-    <p>Found on the <b>Patterns</b> tab in the side panel. A preset stores only the step colors of the columns you grouped — never names, mount points, or IDs — so any pattern can be dropped onto any columns, in any copy of this file.</p>
+    <p>Found on the <b>Patterns</b> tab in the side panel. A preset stores the step colors and per-cell intensity of the columns you grouped — never names, mount points, or IDs — so any pattern can be dropped onto any columns, in any copy of this file.</p>
     <ul>
       <li>Group the columns you want, name the pattern, and click <b>Save grouped columns</b>.</li>
       <li><b>Apply</b> puts a saved pattern back onto either the grouped columns or new columns appended at the end (choose with the "Apply to" dropdown). If the pattern has more or fewer steps than your project, steps are added or the pattern is tiled to fit.</li>
@@ -1449,10 +1449,32 @@ function setStatus(msg){ document.getElementById('status').textContent = msg; }
 
 /* ====================================================================
    Preset patterns
-   A preset is colors only: an array of columns, each an array of
-   per-step colors (null = off). Light ids, names and mount points are
-   never stored, so a preset drops onto any columns in any file.
+   A preset is colors (+ per-cell intensity) only: an array of columns,
+   each an array of per-step cells (null = off). A cell is either a hex
+   string (full intensity, and the only form old preset files used) or
+   {c: hex, i: 0-1} when dimmed, keeping old files loading unchanged.
+   Light ids, names and mount points are never stored, so a preset drops
+   onto any columns in any file.
    ==================================================================== */
+
+// Pack/unpack a single preset cell so full-intensity cells stay a plain
+// hex string (backward compatible with pre-intensity preset files) and
+// only dimmed cells pay the extra {c,i} object.
+function packPresetCell(hex, intensity){
+  if(!hex) return null;
+  return (typeof intensity === 'number' && intensity < 1) ? { c: hex, i: clamp(intensity, 0, 1) } : hex;
+}
+function normPresetCell(c){
+  if(c && typeof c === 'object' && !Array.isArray(c)){
+    const hex = normHex(c.c);
+    if(!hex) return null;
+    const i = typeof c.i === 'number' && !isNaN(c.i) ? clamp(c.i, 0, 1) : 1;
+    return packPresetCell(hex, i);
+  }
+  return normHex(c);
+}
+function presetCellHex(c){ return (c && typeof c === 'object') ? c.c : c; }
+function presetCellIntensity(c){ return (c && typeof c === 'object' && typeof c.i === 'number') ? c.i : 1; }
 
 function pruneSelection(){
   const live = new Set(state.lights.map(l => l.id));
@@ -1467,7 +1489,7 @@ function normalizePreset(p){
   if(!p || typeof p !== 'object') return null;
   const raw = Array.isArray(p.columns) ? p.columns : null;
   if(!raw || !raw.length) return null;
-  const columns = raw.filter(Array.isArray).map(col => col.map(c => normHex(c)));
+  const columns = raw.filter(Array.isArray).map(col => col.map(c => normPresetCell(c)));
   if(!columns.length) return null;
   const len = columns.reduce((m,c) => Math.max(m, c.length), 0);
   if(!len) return null;
@@ -1515,7 +1537,9 @@ function presetSwatches(p){
     let cells = '';
     for(let i=0;i<rows;i++){
       const c = col[Math.floor(i * stepCount / rows)];
-      cells += '<i style="' + (c ? 'background:' + c : '') + '"></i>';
+      const hex = presetCellHex(c);
+      const style = hex ? 'background:' + hex + ';opacity:' + Math.max(0.25, presetCellIntensity(c)) : '';
+      cells += '<i style="' + style + '"></i>';
     }
     return '<div class="minicol">' + cells + '</div>';
   }).join('') + '</div>';
@@ -1552,7 +1576,7 @@ document.getElementById('savePreset').onclick = () => {
   presets.push({
     id: uid(),
     name: name.slice(0,60),
-    columns: cols.map(l => state.steps.map(s => normHex(s.cells[l.id])))
+    columns: cols.map(l => state.steps.map(s => packPresetCell(normHex(s.cells[l.id]), getCellIntensity(s, l.id))))
   });
   savePresets(); renderPresets();
   field.value = '';
@@ -1585,7 +1609,14 @@ function applyPreset(id){
   // More columns than the preset holds? Tile the pattern across them.
   targets.forEach((l, i) => {
     const col = p.columns[i % p.columns.length];
-    state.steps.forEach((s, si) => { s.cells[l.id] = si < col.length ? col[si] : null; if(s.intensity) delete s.intensity[l.id]; });
+    state.steps.forEach((s, si) => {
+      const cell = si < col.length ? col[si] : null;
+      const hex = presetCellHex(cell);
+      s.cells[l.id] = hex;
+      if(!s.intensity) s.intensity = {};
+      const iv = presetCellIntensity(cell);
+      if(hex && iv < 1) s.intensity[l.id] = iv; else delete s.intensity[l.id];
+    });
   });
 
   render(); persist();
@@ -1619,8 +1650,8 @@ document.getElementById('presetList').addEventListener('click', e => {
 function slug(s){ return String(s).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'') || 'pattern'; }
 function downloadPresets(list, filename){
   const payload = list.length === 1
-    ? { type: PRESET_FILE_TYPE, version: 1, name: list[0].name, columns: list[0].columns }
-    : { type: PRESET_FILE_TYPE, version: 1, patterns: list.map(p => ({ name: p.name, columns: p.columns })) };
+    ? { type: PRESET_FILE_TYPE, version: 2, name: list[0].name, columns: list[0].columns }
+    : { type: PRESET_FILE_TYPE, version: 2, patterns: list.map(p => ({ name: p.name, columns: p.columns })) };
   const blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -1673,7 +1704,11 @@ function extractPresets(data){
   if(Array.isArray(data.lights) && Array.isArray(data.steps) && data.lights.length && data.steps.length){
     const p = normalizePreset({
       name: 'Imported pattern',
-      columns: data.lights.map(l => data.steps.map(s => normHex(s && s.cells ? s.cells[l.id] : null)))
+      columns: data.lights.map(l => data.steps.map(s => {
+        const hex = s && s.cells ? normHex(s.cells[l.id]) : null;
+        const iv = s && s.intensity && typeof s.intensity[l.id] === 'number' ? s.intensity[l.id] : 1;
+        return packPresetCell(hex, iv);
+      }))
     });
     return p ? [p] : [];
   }
