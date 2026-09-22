@@ -94,11 +94,14 @@
 
   .gridwrap{overflow:auto; border:1px solid var(--border); border-radius:9px; max-height:60vh;}
   table{border-collapse:collapse;}
-  th,td{border:1px solid var(--border); padding:0; text-align:center;}
+  th,td{border:1px solid var(--border); padding:0; text-align:center; transition:background-color 1.4s ease;}
   thead th{background:var(--panel2); position:sticky; top:0; z-index:2; padding:5px 3px; width:100px;}
   thead th.corner{position:sticky; left:0; top:0; z-index:3; background:var(--panel2); width:70px;}
   tbody th{position:sticky; left:0; background:var(--panel); z-index:1; padding:2px 4px; width:70px;}
   tr.playing td, tr.playing th{background:rgba(56,214,255,.08);}
+  tr.new-dup td, tr.new-dup th{background:rgba(56,214,255,.3);}
+  .newbadge{background:var(--accent); color:#04202a; font-size:.58rem; font-weight:700; padding:1px 5px; border-radius:3px; white-space:nowrap;}
+  .newbadge-wrap{display:flex; justify-content:center; margin-top:3px;}
   .lh{display:flex; flex-direction:column; align-items:center; gap:4px;}
   .lh .ind{width:14px; height:14px; border-radius:50%; background:var(--cell-off); border:1px solid var(--border);}
   .lh .ind.on{box-shadow:0 0 8px 2px var(--glow,#fff);}
@@ -799,11 +802,16 @@ function pasteSteps(id){
   setStatus('Pasted steps from "' + stepClipboard.fromName + '" onto "' + l.name + '"' + (extra > 0 ? ' (' + extra + ' step' + (extra === 1 ? '' : 's') + ' added since copying ' + (extra === 1 ? 'was' : 'were') + ' set to off).' : '.'));
 }
 function addStep(){ state.steps.push(newStep()); render(); persist(); }
+let justDuplicatedId = null, dupHighlightTimer = null;
 function duplicateStep(idx){
   const copy = JSON.parse(JSON.stringify(state.steps[idx]));
   copy.id = uid();
   state.steps.splice(idx+1, 0, copy);
+  justDuplicatedId = copy.id;
   render(); persist();
+  setStatus('Duplicated step ' + (idx+1) + ' — the copy is highlighted just below it.');
+  clearTimeout(dupHighlightTimer);
+  dupHighlightTimer = setTimeout(() => { justDuplicatedId = null; renderGrid(); }, 2600);
 }
 function removeStep(idx){ state.steps.splice(idx,1); render(); persist(); }
 function moveStep(idx, dir){
@@ -997,7 +1005,8 @@ function renderGrid(){
     html += `<tr><td colspan="${state.lights.length+1}" class="empty-state">No steps yet — click "Add Step".</td></tr>`;
   }
   state.steps.forEach((s, idx) => {
-    html += `<tr data-step="${idx}"><th>
+    const isNew = s.id === justDuplicatedId;
+    html += `<tr data-step="${idx}" data-id="${s.id}" class="${isNew ? 'new-dup' : ''}"><th>
       <div class="rh">
         <span class="snum">${idx+1}</span>
         <button class="icon" title="Up" data-role="up" data-idx="${idx}">↑</button>
@@ -1005,6 +1014,7 @@ function renderGrid(){
         <button class="icon" title="Duplicate" data-role="dup" data-idx="${idx}">⧉</button>
         <button class="icon danger" title="Delete" data-role="delStep" data-idx="${idx}">×</button>
       </div>
+      ${isNew ? '<div class="newbadge-wrap"><span class="newbadge">New copy</span></div>' : ''}
     </th>`;
     state.lights.forEach(l => {
       const c = s.cells[l.id];
